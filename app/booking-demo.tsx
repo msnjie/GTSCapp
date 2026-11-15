@@ -2,7 +2,8 @@
 import {useEffect,useState} from 'react';
 const SERVICES={
  'Express':['Banjul','Serrekunda','Brikama','Soma','Kundang','Brikama-Ba','Janjan Burreh','Bansang','Bakadaji','Basse'],
- 'Normal':['Banjul','Faraba Banta','Bulock','Kalaji','Soma','Jareng','Kudang','Jahali','Basse']
+ 'Normal':['Banjul','Faraba Banta','Bulock','Kalaji','Soma','Jareng','Kudang','Jahali','Basse'],
+ 'International (Dakar)':['Banjul','Dakar, Senegal']
 } as const;
 type Service=keyof typeof SERVICES;
 type Trip={id:string;origin:string;destination:string;departure_at:string;capacity:number;fare_bututs:number};
@@ -24,7 +25,7 @@ export default function BookingDemo(){
  const [holding,setHolding]=useState(false);
  const [holdReceipt,setHoldReceipt]=useState('');
  const [bookingEnabled,setBookingEnabled]=useState(false);
- const destinations=stops.slice(Math.max(0,stops.indexOf(origin)+1));
+ const destinations=service==='International (Dakar)'?stops.filter(stop=>stop!==origin):stops.slice(Math.max(0,stops.indexOf(origin)+1));
  const capacity=demoMode?40:selectedTrip?.capacity??0;
  async function search(){
   setBusy(true);setDemoMode(false);setSelectedTrip(null);setSeat(null);setHoldReceipt('');setMessage('');
@@ -46,7 +47,7 @@ export default function BookingDemo(){
   }
   load();return()=>{cancelled=true};
  },[selectedTrip]);
- function chooseService(s:Service){setService(s);setOrigin('Banjul');setDestination('Basse');setSelectedTrip(null);setSeat(null);setTrips([]);setDemoMode(false);}
+ function chooseService(s:Service){setService(s);setOrigin('Banjul');setDestination(s==='International (Dakar)'?'Dakar, Senegal':'Basse');setSelectedTrip(null);setSeat(null);setTrips([]);setDemoMode(false);setMessage('');}
  function beginDemo(){setDemoMode(true);setSelectedTrip(null);setSeat(null);setUnavailable([3,8,14,26]);setHoldReceipt('');setMessage('Sample bus seat map — example seats only, not GTSC live inventory.');}
  async function hold(){
   if(!selectedTrip||!bookingEnabled||!seat||!customerName.trim()||!customerPhone.trim())return;
@@ -69,12 +70,12 @@ export default function BookingDemo(){
    <section style={panel}>
     <h2 style={heading}>Find your journey</h2>
     <div style={fields}>
-     <label style={field}>Bus service<select value={service} onChange={e=>chooseService(e.target.value as Service)} style={control}><option value="Express">Express</option><option value="Normal">Normal</option></select></label>
-     <label style={field}>Departure<select value={origin} onChange={e=>{const from=e.target.value;setOrigin(from);setDestination(stops.slice(stops.indexOf(from)+1)[0]||'');setSelectedTrip(null)}} style={control}>{stops.slice(0,-1).map(x=><option key={x} value={x}>{x}</option>)}</select></label>
+     <label style={field}>Bus service<select value={service} onChange={e=>chooseService(e.target.value as Service)} style={control}><option value="Express">Express</option><option value="Normal">Normal</option><option value="International (Dakar)">International (Dakar)</option></select></label>
+     <label style={field}>Departure<select value={origin} onChange={e=>{const from=e.target.value;setOrigin(from);setDestination(service==='International (Dakar)'?(from==='Banjul'?'Dakar, Senegal':'Banjul'):(stops.slice(stops.indexOf(from)+1)[0]||''));setSelectedTrip(null)}} style={control}>{(service==='International (Dakar)'?stops:stops.slice(0,-1)).map(x=><option key={x} value={x}>{x}</option>)}</select></label>
      <label style={field}>Destination<select value={destination} onChange={e=>setDestination(e.target.value)} style={control}>{destinations.map(x=><option key={x} value={x}>{x}</option>)}</select></label>
      <label style={field}>Travel date<input type="date" style={control} value={date} min={new Date().toISOString().slice(0,10)} onChange={e=>setDate(e.target.value)}/></label>
     </div>
-    <p style={{fontSize:12,color:'#596e64'}}>Stop sequences are based on a historical published GTSC trip guide; current boarding locations, timetables and fares still require GTSC approval.</p>
+    <p style={{fontSize:12,color:'#596e64'}}>The international Banjul–Dakar route is listed by GTSC, but exact pickup points, current operating times and fares are not verified in this prototype. Other stop sequences are from a historical trip guide. International travel may require valid travel documents.</p>
     <button style={button} disabled={!date||!destination||busy} onClick={search}>{busy?'Searching…':'Search verified departures'}</button>
     <button style={{...button,background:'#e6f0e9',color:'#064c3b',marginLeft:8}} onClick={beginDemo}>Preview sample seat map</button>
    </section>
