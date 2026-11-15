@@ -94,7 +94,7 @@ export default function BookingDemo(){
   finally{setCheckoutBusy(false);}
  }
  async function hold(){
-  if(!selectedTrip||!bookingEnabled||!seat||!passengerName.trim()||!/^\\+[1-9]\\d{7,14}$/.test(passengerPhone.trim()))return;
+  if(!selectedTrip||!bookingEnabled||!seat||!passengerName.trim()||!/^\+[1-9]\d{7,14}$/.test(passengerPhone.trim()))return;
   setHolding(true);setMessage('');setHoldReceipt('');
   try{
    const resp=await fetch('/api/holds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tripId:selectedTrip.id,seatNumber:seat,passengerName:passengerName.trim(),phone:passengerPhone.trim(),email:passengerEmail.trim()})});
@@ -152,7 +152,7 @@ export default function BookingDemo(){
         <input type="email" autoComplete="email" maxLength={254} value={passengerEmail} onChange={e=>setPassengerEmail(e.target.value)} placeholder="name@example.com" style={control}/>
       </label>
       <p style={{fontSize:13,margin:0}}>Sandbox trial: passenger details are stored privately for this test hold. It expires in 10 minutes and cannot be used to travel. No automatic emails or WhatsApp confirmations are sent.</p>
-      <button type="submit" style={button} disabled={!seat||holding||!passengerName.trim()||!/^\\+[1-9]\\d{7,14}$/.test(passengerPhone.trim())}>{holding?'Holding…':'Create 10-minute TEST seat hold'}</button>
+      <button type="submit" style={button} disabled={!seat||holding||!passengerName.trim()||!/^\+[1-9]\d{7,14}$/.test(passengerPhone.trim())}>{holding?'Holding…':'Create 10-minute TEST seat hold'}</button>
     </form>}
     {demoMode&&<div style={{textAlign:'center'}}><p style={{fontWeight:600}}>Demonstration only — no reservation created.</p><button style={button} disabled={!seat} onClick={()=>setSampleCheckout(true)}>Preview booking summary</button>{sampleCheckout&&seat&&<div style={{background:'#eef7f1',padding:16,borderRadius:10,marginTop:12,textAlign:'left'}}><h3 style={{marginTop:0}}>Sample booking summary</h3><p><strong>Journey:</strong> {origin} → {destination}</p><p><strong>Service:</strong> {service}</p><p><strong>Travel date:</strong> {date||'Not selected'}</p><p><strong>Seat:</strong> {seat}</p><p><strong>Approved fare (not payable yet):</strong> {historicalFare?fareLabel(historicalFare):'Unavailable'} — no payable departure currently selected</p><p><strong>Payment:</strong> Disabled (sandbox setup)</p><p style={{fontSize:13}}>This is not a reservation, payment receipt or valid travel ticket. No QR code has been issued.</p></div>}</div>}
     {holdReceipt&&<p role="status">{holdReceipt}</p>}

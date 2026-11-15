@@ -7,7 +7,7 @@ const bodySchema=z.object({
  tripId:z.string().uuid(),
  seatNumber:z.number().int().min(1).max(100),
  passengerName:z.string().trim().min(2).max(100),
- phone:z.string().regex(/^\\+[1-9]\\d{7,14}$/),
+ phone:z.string().regex(/^\+[1-9]\d{7,14}$/),
  email:z.union([z.string().email().max(254),z.literal('')]).optional().default('')
 }).strict();
 export async function POST(req:Request){
