@@ -119,7 +119,7 @@ export default function BookingDemo(){
      <p style={{fontSize:13,marginBottom:0,color:'#e2e6ff'}}>SANDBOX BOOKING TRIAL — test holds only, automatically expire in 10 minutes. No real charges or travel tickets. Optional Modem Pay TEST checkout can be used for simulation.</p>
    </header>
    <section style={panel}>
-    <h2 style={heading}>Find your journey</h2>
+    <h2 style={heading}>Book your journey</h2>
     <p style={{fontSize:13,color:'#626985'}}>Choose <strong>All GTSC locations — request departure</strong> to select any listed town or terminal as your departure point. An online request does not mean a bus is scheduled from that location. Choose a named service to find its published sandbox test departures.</p>
     <div style={fields}>
      <label style={field}>Bus service<select value={service} onChange={e=>chooseService(e.target.value as Service)} style={control}><option value="All locations (departure request)">All GTSC locations — request departure</option><option value="Nuwari Express">Nuwari Express</option><option value="Super Express">Super Express</option><option value="Express">Express (historic fares)</option><option value="Normal">Normal Service</option><option value="International (Dakar)">International (Dakar)</option><option value="International (Bissau)">International (Bissau)</option><option value="International (Kaolack)">International (Kaolack)</option><option value="International (Tivaouane)">International (Tivaouane)</option><option value="Up-country">Up-country</option><option value="North Bank">North Bank</option><option value="Urban">Urban</option></select></label>
