@@ -4,19 +4,23 @@ import {REFERENCE_FARES,referenceFare,fareLabel} from '../lib/reference-fares';
 import Timetable from './timetable';
 const SERVICES={
  'Nuwari Express':['Kanifing','Basse'],
- 'Super Express':['Kanifing','Basse'],
+ 'Super Express':['Kanifing','Brikama','Soma','Brikama Ba','Janjanbureh','Bansang','Bakadaji','Basse'],
  'Express':['Banjul','Serrekunda','Brikama','Soma','Kundang','Brikama-Ba','Janjan Burreh','Bansang','Bakadaji','Basse'],
- 'Normal':['Banjul','Faraba Banta','Bulock','Kalaji','Soma','Jareng','Kudang','Jahali','Basse'],
+ 'Normal':['Kanifing','Faraba Banta','Bulock','Kabokor','Bajagar','Sangajor','Kalaji','Wurokang','Kolior','Soma','Jalang Bereh','Wellingara Ba','Pakaliba','Jareng','Kudang','Jahali','Nurtabeh','Banjulinding','Sare Modu','Sare Bakary','Sare Sambel','Basse'],
  'International (Dakar)':['Kanifing','Dakar, Senegal','Banjul'],
- 'International (Bissau)':['Banjul','Bissau, Guinea-Bissau'],
- 'Urban':['Banjul','Kartong','Giboroh','Kafuta','Brikama','Mandinaring','Tabokoto','Lamin']
+ 'International (Bissau)':['Kanifing','Bissau, Guinea-Bissau'],
+ 'International (Kaolack)':['Kanifing','Kaolack, Senegal'],
+ 'International (Tivaouane)':['Kanifing','Tivaouane, Senegal'],
+ 'Up-country':['Kanifing','Kunting','Mankamang Kunda','Koina','Kudang'],
+ 'North Bank':['Essau','Farafenni','Kaur','Wassu','Panchang'],
+ 'Urban':['Banjul','Serrekunda','Kanifing','Brikama','Kartong','Giboroh','Kafuta','Mandinaring','Tabokoto','Lamin']
 } as const;
 type Service=keyof typeof SERVICES;
 type Trip={id:string;origin:string;destination:string;departure_at:string;capacity:number;fare_bututs:number};
 export default function BookingDemo(){
- const [service,setService]=useState<Service>('Express');
+ const [service,setService]=useState<Service>('Nuwari Express');
  const stops:readonly string[]=SERVICES[service];
- const [origin,setOrigin]=useState('Banjul');
+ const [origin,setOrigin]=useState('Kanifing');
  const [destination,setDestination]=useState('Basse');
  const [date,setDate]=useState('');
  const [trips,setTrips]=useState<Trip[]>([]);
@@ -34,7 +38,9 @@ export default function BookingDemo(){
  const [checkoutBusy,setCheckoutBusy]=useState(false);
  const [checkoutUrl,setCheckoutUrl]=useState('');
  const [checkoutError,setCheckoutError]=useState('');
- const destinations=service==='International (Dakar)'?(origin==='Dakar, Senegal'?['Banjul']:['Dakar, Senegal']):service==='Urban'&&origin==='Banjul'?stops.slice(1):stops.slice(Math.max(0,stops.indexOf(origin)+1));
+ const destinations=service==='International (Dakar)'?(origin==='Dakar, Senegal'?['Banjul']:['Dakar, Senegal']):(['Urban','Up-country','North Bank'].includes(service)?stops.filter(stop=>stop!==origin):stops.slice(Math.max(0,stops.indexOf(origin)+1)));
+ const contactMessage='GTSC SANDBOX BOOKING ENQUIRY (NOT A PAID BOOKING). Service: '+service+'. From: '+origin+'. To: '+destination+'. Preferred date: '+(date||'not selected')+'. Please confirm departure, availability and fare. No payment has been made.';
+ const contactHref='https://wa.me/2203663800?text='+encodeURIComponent(contactMessage);
  const historicalFare=referenceFare(service,origin,destination);
  const capacity=demoMode?40:selectedTrip?.capacity??0;
  async function search(){
@@ -44,7 +50,7 @@ export default function BookingDemo(){
    const data=await resp.json();
    if(!resp.ok)throw new Error(data.error||'Unable to search');
    setTrips(data.trips||[]);setBookingEnabled(Boolean(data.bookingEnabled));
-   setMessage(data.trips?.length?'Choose a departure below.':(data.notice||'No test departures for this route or date. Other routes are listed in the timetable guide.'));
+   setMessage(data.trips?.length?'Choose a departure below.':(data.notice||'No test departures available for this route or date. Please use the booking enquiry link for service confirmation.'));
   }catch(e){setMessage(e instanceof Error?e.message:'Unable to search');}
   finally{setBusy(false);}
  }
@@ -57,7 +63,15 @@ export default function BookingDemo(){
   }
   load();return()=>{cancelled=true};
  },[selectedTrip]);
- function chooseService(s:Service){setService(s);setOrigin(['Nuwari Express','Super Express','International (Dakar)'].includes(s)?'Kanifing':'Banjul');setDestination(s==='Nuwari Express'||s==='Super Express'?'Basse':s==='International (Dakar)'?'Dakar, Senegal':s==='International (Bissau)'?'Bissau, Guinea-Bissau':s==='Urban'?'Kartong':'Basse');setSelectedTrip(null);setSeat(null);setTrips([]);setDemoMode(false);setSampleCheckout(false);setCheckoutReservationId('');setCheckoutUrl('');setCheckoutError('');setMessage('');}
+ function chooseService(s:Service){
+  setService(s);
+  const from=s==='International (Dakar)'||s==='Nuwari Express'||s==='Super Express'||s.startsWith('International (')||s==='Up-country'||s==='Normal'?'Kanifing':s==='North Bank'?'Essau':'Banjul';
+  const list:readonly string[]=SERVICES[s];
+  setOrigin(from);
+  setDestination(s==='International (Dakar)'?'Dakar, Senegal':s==='Super Express'||s==='Nuwari Express'||s==='Normal'||s==='Express'?'Basse':list.find(x=>x!==from)||'');
+  setSelectedTrip(null);setSeat(null);setTrips([]);setDemoMode(false);setSampleCheckout(false);
+  setCheckoutReservationId('');setCheckoutUrl('');setCheckoutError('');setHoldReceipt('');setMessage('');
+ }
  function beginDemo(){setDemoMode(true);setSelectedTrip(null);setSeat(null);setUnavailable([3,8,14,26]);setHoldReceipt('');setCheckoutReservationId('');setCheckoutUrl('');setCheckoutError('');setSampleCheckout(false);setMessage('Sample bus seat map — example seats only, not GTSC live inventory.');}
  async function beginSandboxCheckout(){
   if(!checkoutReservationId||checkoutBusy)return;
@@ -96,15 +110,16 @@ export default function BookingDemo(){
    <section style={panel}>
     <h2 style={heading}>Find your journey</h2>
     <div style={fields}>
-     <label style={field}>Bus service<select value={service} onChange={e=>chooseService(e.target.value as Service)} style={control}><option value="Nuwari Express">Nuwari Express</option><option value="Super Express">Super Express</option><option value="Express">Express (historical route)</option><option value="Normal">Normal</option><option value="International (Dakar)">International (Dakar)</option><option value="International (Bissau)">International (Bissau)</option><option value="Urban">Urban</option></select></label>
-     <label style={field}>Departure<select value={origin} onChange={e=>{const from=e.target.value;setOrigin(from);setDestination(service==='International (Dakar)'?(from==='Dakar, Senegal'?'Banjul':'Dakar, Senegal'):(stops.slice(stops.indexOf(from)+1)[0]||''));setSelectedTrip(null)}} style={control}>{(service==='International (Dakar)'?['Kanifing','Dakar, Senegal']:stops.slice(0,-1)).map(x=><option key={x} value={x}>{x}</option>)}</select></label>
-     <label style={field}>Destination<select value={destination} onChange={e=>setDestination(e.target.value)} style={control}>{destinations.map(x=><option key={x} value={x}>{x}</option>)}</select></label>
-     <label style={field}>Travel date<input type="date" style={control} value={date} min={new Date().toISOString().slice(0,10)} onChange={e=>setDate(e.target.value)}/></label>
+     <label style={field}>Bus service<select value={service} onChange={e=>chooseService(e.target.value as Service)} style={control}><option value="Nuwari Express">Nuwari Express</option><option value="Super Express">Super Express</option><option value="Express">Express (historic fares)</option><option value="Normal">Normal Service</option><option value="International (Dakar)">International (Dakar)</option><option value="International (Bissau)">International (Bissau)</option><option value="International (Kaolack)">International (Kaolack)</option><option value="International (Tivaouane)">International (Tivaouane)</option><option value="Up-country">Up-country</option><option value="North Bank">North Bank</option><option value="Urban">Urban</option></select></label>
+     <label style={field}>Departure<select value={origin} onChange={e=>{const from=e.target.value;setOrigin(from);setDestination(service==='International (Dakar)'?(from==='Dakar, Senegal'?'Banjul':'Dakar, Senegal'):['Urban','Up-country','North Bank'].includes(service)?stops.find(x=>x!==from)||'':stops.slice(stops.indexOf(from)+1)[0]||'');setSelectedTrip(null);setSeat(null);setTrips([]);setHoldReceipt('');setCheckoutReservationId('')}} style={control}>{(['Urban','Up-country','North Bank'].includes(service)?stops:service==='International (Dakar)'?['Kanifing','Dakar, Senegal']:stops.slice(0,-1)).map(x=><option key={x} value={x}>{x}</option>)}</select></label>
+     <label style={field}>Destination<select value={destination} onChange={e=>{setDestination(e.target.value);setSelectedTrip(null);setSeat(null);setTrips([]);setHoldReceipt('');setCheckoutReservationId('')}} style={control}>{destinations.map(x=><option key={x} value={x}>{x}</option>)}</select></label>
+     <label style={field}>Travel date<input type="date" style={control} value={date} min={new Date().toISOString().slice(0,10)} onChange={e=>{setDate(e.target.value);setSelectedTrip(null);setSeat(null);setTrips([]);setHoldReceipt('');setCheckoutReservationId('')}}/></label>
     </div>
-    <p style={{fontSize:12,color:'#596e64'}}>Fare amounts were approved for this project. Dakar has since been updated to D1,150 one-way from the supplied timetable. Boarding points, timetables, transport operators and payment merchant readiness must still be confirmed. Test seat holds and TEST payment checkout only. No real bookings, ticket issuance or live charges.</p>
-    <div style={{background:'#fff8df',padding:'12px 14px',borderRadius:9,marginBottom:14}}><strong>Approved fare (not payable yet): </strong>{historicalFare?fareLabel(historicalFare):'No origin-specific fare provided'}{historicalFare&&<span style={{display:'block',fontSize:12,marginTop:4}}>{historicalFare.note||'Amount approved for GTSC app; departure availability not yet published'}</span>}</div>
+    <p style={{fontSize:12,color:'#596e64'}}>Fare amounts were approved for this project. Dakar has since been updated to D1,150 one-way from the supplied timetable. Boarding points, timetables, transport operators and payment merchant readiness must still be confirmed. Test seat holds and TEST payment checkout only. Routes without verified departures can send an enquiry; only listed sandbox departures support test seat holds. No real bookings, ticket issuance or live charges.</p>
+    <div style={{background:'#fff8df',padding:'12px 14px',borderRadius:9,marginBottom:14}}><strong>Reference fare (not payable yet): </strong>{historicalFare?fareLabel(historicalFare):'No origin-specific fare provided'}{historicalFare&&<span style={{display:'block',fontSize:12,marginTop:4}}>{historicalFare.note||'Amount approved for GTSC app; departure availability not yet published'}</span>}</div>
     <button style={button} disabled={!date||!destination||busy} onClick={search}>{busy?'Searching…':'Find sandbox departures'}</button>
     <button style={{...button,background:'#e6f0e9',color:'#064c3b',marginLeft:8}} onClick={beginDemo}>Preview sample seat map</button>
+    <div style={{marginTop:14,padding:14,border:'1px solid #c7d8ce',borderRadius:10}}><strong>Booking enquiry for every destination</strong><p style={{fontSize:13}}>If no test departure is shown, request route details from the GTSC test contact. The message opens WhatsApp; you decide whether to send it. This is not a reserved seat or payment confirmation.</p><a href={contactHref} target="_blank" rel="noopener noreferrer" style={{display:'inline-block',padding:'11px 14px',borderRadius:9,background:'#146b42',color:'#fff',fontWeight:700,textDecoration:'none'}}>Enquire via WhatsApp (+220 366 3800)</a></div>
    </section>
    {message&&<p role="status" style={{background:'#fef8e7',padding:14,borderRadius:10}}>{message}</p>}
    {trips.length>0&&<section style={panel}><h2 style={heading}>Available departures</h2>{trips.map(t=><button key={t.id} style={{...button,marginRight:8,marginBottom:8,background:selectedTrip?.id===t.id?'#064c3b':'#507c65'}} onClick={()=>{setSelectedTrip(t);setDemoMode(false);setSeat(null);}}>{new Date(t.departure_at).toLocaleString()} — GMD {(t.fare_bututs/100).toFixed(2)}</button>)}</section>}
