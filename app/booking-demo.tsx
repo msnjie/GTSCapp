@@ -23,6 +23,7 @@ export default function BookingDemo(){
  const [customerName,setCustomerName]=useState('');
  const [customerPhone,setCustomerPhone]=useState('');
  const [holding,setHolding]=useState(false);
+ const [sampleCheckout,setSampleCheckout]=useState(false);
  const [holdReceipt,setHoldReceipt]=useState('');
  const [bookingEnabled,setBookingEnabled]=useState(false);
  const destinations=service==='International (Dakar)'?stops.filter(stop=>stop!==origin):stops.slice(Math.max(0,stops.indexOf(origin)+1));
@@ -47,8 +48,8 @@ export default function BookingDemo(){
   }
   load();return()=>{cancelled=true};
  },[selectedTrip]);
- function chooseService(s:Service){setService(s);setOrigin('Banjul');setDestination(s==='International (Dakar)'?'Dakar, Senegal':'Basse');setSelectedTrip(null);setSeat(null);setTrips([]);setDemoMode(false);setMessage('');}
- function beginDemo(){setDemoMode(true);setSelectedTrip(null);setSeat(null);setUnavailable([3,8,14,26]);setHoldReceipt('');setMessage('Sample bus seat map — example seats only, not GTSC live inventory.');}
+ function chooseService(s:Service){setService(s);setOrigin('Banjul');setDestination(s==='International (Dakar)'?'Dakar, Senegal':'Basse');setSelectedTrip(null);setSeat(null);setTrips([]);setDemoMode(false);setSampleCheckout(false);setMessage('');}
+ function beginDemo(){setDemoMode(true);setSelectedTrip(null);setSeat(null);setUnavailable([3,8,14,26]);setHoldReceipt('');setSampleCheckout(false);setMessage('Sample bus seat map — example seats only, not GTSC live inventory.');}
  async function hold(){
   if(!selectedTrip||!bookingEnabled||!seat||!customerName.trim()||!customerPhone.trim())return;
   setHolding(true);setMessage('');setHoldReceipt('');
@@ -85,7 +86,7 @@ export default function BookingDemo(){
     <h2 style={heading}>{demoMode?'Sample 40-seat layout':'Choose your seat'}</h2>
     <p style={{fontSize:13,color:'#64796d'}}>Grey seats are unavailable. Select one seat. {demoMode?'This preview is local to your browser; it does not reserve a seat.':'Availability can change until the hold is confirmed.'}</p>
     <div style={{display:'grid',gridTemplateColumns:'repeat(5, minmax(40px, 1fr))',gap:9,maxWidth:360,margin:'18px auto'}}>
-      {Array.from({length:Math.ceil(capacity/4)},(_,r)=>[r*4+1,r*4+2,0,r*4+3,r*4+4]).flat().map((num,i)=>num===0||num>capacity?<span key={'gap'+i}/>:<button key={num} onClick={()=>setSeat(num)} disabled={unavailable.includes(num)} aria-label={'Seat '+num} aria-pressed={seat===num} style={{height:48,borderRadius:9,border:'1px solid #a1b9aa',fontWeight:700,background:unavailable.includes(num)?'#c6ceca':seat===num?'#0e6b4b':'#e7f3eb',color:unavailable.includes(num)?'#738077':seat===num?'white':'#17543f',cursor:unavailable.includes(num)?'not-allowed':'pointer'}}>{num}</button>)}
+      {Array.from({length:Math.ceil(capacity/4)},(_,r)=>[r*4+1,r*4+2,0,r*4+3,r*4+4]).flat().map((num,i)=>num===0||num>capacity?<span key={'gap'+i}/>:<button key={num} onClick={()=>{setSeat(num);setSampleCheckout(false)}} disabled={unavailable.includes(num)} aria-label={'Seat '+num} aria-pressed={seat===num} style={{height:48,borderRadius:9,border:'1px solid #a1b9aa',fontWeight:700,background:unavailable.includes(num)?'#c6ceca':seat===num?'#0e6b4b':'#e7f3eb',color:unavailable.includes(num)?'#738077':seat===num?'white':'#17543f',cursor:unavailable.includes(num)?'not-allowed':'pointer'}}>{num}</button>)}
     </div>
     <p style={{textAlign:'center'}}>Selected seat: <strong>{seat||'None'}</strong></p>
     {selectedTrip&&bookingEnabled&&<div style={fields}>
@@ -93,7 +94,7 @@ export default function BookingDemo(){
       <label style={field}>Phone number<input style={control} value={customerPhone} maxLength={30} onChange={e=>setCustomerPhone(e.target.value)}/></label>
       <button style={button} disabled={!seat||!customerName.trim()||!customerPhone.trim()||holding} onClick={hold}>{holding?'Holding…':'Hold selected seat for 10 minutes'}</button>
     </div>}
-    {demoMode&&<p style={{textAlign:'center',fontWeight:600}}>Demonstration only — no reservation created.</p>}
+    {demoMode&&<div style={{textAlign:'center'}}><p style={{fontWeight:600}}>Demonstration only — no reservation created.</p><button style={button} disabled={!seat} onClick={()=>setSampleCheckout(true)}>Preview booking summary</button>{sampleCheckout&&seat&&<div style={{background:'#edf7ef',padding:16,borderRadius:10,marginTop:12,textAlign:'left'}}><h3 style={{marginTop:0}}>Sample booking summary</h3><p><strong>Journey:</strong> {origin} → {destination}</p><p><strong>Service:</strong> {service}</p><p><strong>Travel date:</strong> {date||'Not selected'}</p><p><strong>Seat:</strong> {seat}</p><p><strong>Fare:</strong> Not confirmed by GTSC</p><p><strong>Payment:</strong> Disabled (sandbox setup)</p><p style={{fontSize:13}}>This is not a reservation, payment receipt or valid travel ticket. No QR code has been issued.</p></div>}</div>}
     {holdReceipt&&<p role="status">{holdReceipt}</p>}
    </section>}
    <footer style={{fontSize:12,color:'#65796b',marginTop:25}}>GTSC booking prototype · Live bookings and Modem Pay checkout are disabled until fares, schedules and security tests are approved.</footer>
