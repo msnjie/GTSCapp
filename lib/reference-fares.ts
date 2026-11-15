@@ -1,11 +1,11 @@
-// Reference-only fares supplied for the GTSC prototype. NEVER use as payable fares.
-// Historical GTSC listings and an unverified international partner-service report.
+// Project-owner-approved reference fare amounts. No schedule or live payment is authorized by this file.
+// Only Banjul-origin routes and the Dakar pair have supplied origin-specific prices.
 export type FareGroup='regular'|'express'|'urban'|'international';
 export type FareReference={destination:string;amount:number;currency:'GMD';note?:string};
 export const REFERENCE_FARES:Record<FareGroup,readonly FareReference[]>={
  international:[
-  {destination:'Dakar, Senegal',amount:1500,currency:'GMD',note:'Approx. GMD conversion of 12,000 CFA using 1 XOF ≈ D0.125 (15 Nov 2026); Jan 2026 Dakar Dem Dikk partner-service report, not a GTSC-confirmed fare'},
-  {destination:'Bissau, Guinea-Bissau',amount:700,currency:'GMD',note:'Older unverified estimate'}
+  {destination:'Dakar, Senegal',amount:1500,currency:'GMD',note:'D1,500 approved for the prototype by the project owner; originally converted from 12,000 CFA. Confirm this applies to each direction before GTSC launch'},
+  {destination:'Bissau, Guinea-Bissau',amount:700,currency:'GMD',note:'D700 approved by the project owner; confirm Bissau service with GTSC'}
  ],
  regular:[
   {destination:'Faraba Banta',amount:25,currency:'GMD'},
@@ -28,7 +28,7 @@ export const REFERENCE_FARES:Record<FareGroup,readonly FareReference[]>={
   {destination:'Sare Modu',amount:200,currency:'GMD'},
   {destination:'Sare Bakary',amount:210,currency:'GMD'},
   {destination:'Sare Sambel',amount:215,currency:'GMD'},
-  {destination:'Basse',amount:220,currency:'GMD',note:'Historical sheet also shows a conflicting D20 Basse entry; excluded as apparent error'}
+  {destination:'Basse',amount:220,currency:'GMD',note:'D220 approved by the project owner. D20 duplicate historical entry excluded as apparent error'}
  ],
  express:[
   {destination:'Serrekunda',amount:15,currency:'GMD'},
@@ -59,3 +59,13 @@ export function referenceFare(service:string,origin:string,destination:string):F
  return REFERENCE_FARES[key].find(f=>f.destination===destination);
 }
 export function fareLabel(f:FareReference){return 'D'+f.amount.toLocaleString('en-US');}
+
+/**
+ * Only the explicit fares approved by the project owner are returned.
+ * A missing origin-specific price must NEVER be guessed from another stop.
+ * Monetary units: bututs (1 GMD = 100 bututs).
+ */
+export function approvedAmountBututs(service:string,origin:string,destination:string):number|null{
+ const reference=referenceFare(service,origin,destination);
+ return reference?reference.amount*100:null;
+}

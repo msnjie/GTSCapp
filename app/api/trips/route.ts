@@ -10,7 +10,7 @@ export async function GET(request:Request){
  if(origin.length>120||destination.length>120||!/^\d{4}-\d{2}-\d{2}$/.test(date)){
   return NextResponse.json({error:'Select valid departure, destination and date'},{status:400,headers:{'Cache-Control':'no-store'}});
  }
- if(process.env.BOOKINGS_ENABLED!=='true')return NextResponse.json({trips:[],bookingEnabled:false,notice:'Live departures and fares are not yet approved by GTSC'},{headers:{'Cache-Control':'no-store'}});
+ if(process.env.BOOKINGS_ENABLED!=='true')return NextResponse.json({trips:[],bookingEnabled:false,notice:'Fares approved for the app; scheduled departures have not yet been published'},{headers:{'Cache-Control':'no-store'}});
  try{
   const result=await pool.query(`SELECT id,origin,destination,departure_at,capacity,fare_bututs
     FROM public.trips WHERE active=true AND origin=$1 AND destination=$2
