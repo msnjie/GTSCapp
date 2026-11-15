@@ -34,6 +34,9 @@ export default function BookingDemo(){
  const [seat,setSeat]=useState<number|null>(null);
  const [demoMode,setDemoMode]=useState(false);
  const [holding,setHolding]=useState(false);
+ const [passengerName,setPassengerName]=useState('');
+ const [passengerPhone,setPassengerPhone]=useState('');
+ const [passengerEmail,setPassengerEmail]=useState('');
  const [sampleCheckout,setSampleCheckout]=useState(false);
  const [holdReceipt,setHoldReceipt]=useState('');
  const [bookingEnabled,setBookingEnabled]=useState(false);
@@ -91,10 +94,10 @@ export default function BookingDemo(){
   finally{setCheckoutBusy(false);}
  }
  async function hold(){
-  if(!selectedTrip||!bookingEnabled||!seat)return;
+  if(!selectedTrip||!bookingEnabled||!seat||!passengerName.trim()||!/^\\+[1-9]\\d{7,14}$/.test(passengerPhone.trim()))return;
   setHolding(true);setMessage('');setHoldReceipt('');
   try{
-   const resp=await fetch('/api/holds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tripId:selectedTrip.id,seatNumber:seat})});
+   const resp=await fetch('/api/holds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tripId:selectedTrip.id,seatNumber:seat,passengerName:passengerName.trim(),phone:passengerPhone.trim(),email:passengerEmail.trim()})});
    const d=await resp.json();if(!resp.ok)throw new Error(d.error||'Reservation unsuccessful');
    setCheckoutReservationId(d.reservationId);
    setTicketAccessToken(typeof d.accessToken==='string'?d.accessToken:'');
@@ -137,7 +140,20 @@ export default function BookingDemo(){
       {Array.from({length:Math.ceil(capacity/4)},(_,r)=>[r*4+1,r*4+2,0,r*4+3,r*4+4]).flat().map((num,i)=>num===0||num>capacity?<span key={'gap'+i}/>:<button key={num} onClick={()=>{setSeat(num);setSampleCheckout(false)}} disabled={unavailable.includes(num)} aria-label={'Seat '+num} aria-pressed={seat===num} style={{height:48,borderRadius:9,border:'1px solid #aab1d6',fontWeight:700,background:unavailable.includes(num)?'#c9cce0':seat===num?'#30399a':'#eaeaff',color:unavailable.includes(num)?'#747997':seat===num?'white':'#323d96',cursor:unavailable.includes(num)?'not-allowed':'pointer'}}>{num}</button>)}
     </div>
     <p style={{textAlign:'center'}}>Selected seat: <strong>{seat||'None'}</strong></p>
-    {selectedTrip&&bookingEnabled&&<div style={fields}><p style={{fontSize:13}}>Sandbox trial: no passenger details required. This test hold expires in 10 minutes and cannot be used to travel.</p><button style={button} disabled={!seat||holding} onClick={hold}>{holding?'Holding…':'Create 10-minute TEST seat hold'}</button></div>}
+    {selectedTrip&&bookingEnabled&&<form onSubmit={e=>{e.preventDefault();void hold()}} style={{display:'grid',gap:12,marginTop:20}}>
+      <h3 style={{margin:'0 0 3px',color:'#30399a'}}>Passenger information</h3>
+      <label style={field}>Passenger full name (required)
+        <input required type="text" autoComplete="name" minLength={2} maxLength={100} value={passengerName} onChange={e=>setPassengerName(e.target.value)} placeholder="First and last name" style={control}/>
+      </label>
+      <label style={field}>Phone number (required, international format)
+        <input required type="tel" autoComplete="tel" pattern="[+][1-9][0-9]{7,14}" value={passengerPhone} onChange={e=>setPassengerPhone(e.target.value)} placeholder="+2203663800" style={control}/>
+      </label>
+      <label style={field}>Email address (optional)
+        <input type="email" autoComplete="email" maxLength={254} value={passengerEmail} onChange={e=>setPassengerEmail(e.target.value)} placeholder="name@example.com" style={control}/>
+      </label>
+      <p style={{fontSize:13,margin:0}}>Sandbox trial: passenger details are stored privately for this test hold. It expires in 10 minutes and cannot be used to travel. No automatic emails or WhatsApp confirmations are sent.</p>
+      <button type="submit" style={button} disabled={!seat||holding||!passengerName.trim()||!/^\\+[1-9]\\d{7,14}$/.test(passengerPhone.trim())}>{holding?'Holding…':'Create 10-minute TEST seat hold'}</button>
+    </form>}
     {demoMode&&<div style={{textAlign:'center'}}><p style={{fontWeight:600}}>Demonstration only — no reservation created.</p><button style={button} disabled={!seat} onClick={()=>setSampleCheckout(true)}>Preview booking summary</button>{sampleCheckout&&seat&&<div style={{background:'#eef7f1',padding:16,borderRadius:10,marginTop:12,textAlign:'left'}}><h3 style={{marginTop:0}}>Sample booking summary</h3><p><strong>Journey:</strong> {origin} → {destination}</p><p><strong>Service:</strong> {service}</p><p><strong>Travel date:</strong> {date||'Not selected'}</p><p><strong>Seat:</strong> {seat}</p><p><strong>Approved fare (not payable yet):</strong> {historicalFare?fareLabel(historicalFare):'Unavailable'} — no payable departure currently selected</p><p><strong>Payment:</strong> Disabled (sandbox setup)</p><p style={{fontSize:13}}>This is not a reservation, payment receipt or valid travel ticket. No QR code has been issued.</p></div>}</div>}
     {holdReceipt&&<p role="status">{holdReceipt}</p>}
     {checkoutReservationId&&!demoMode&&<div style={{margin:'12px 0',padding:14,borderRadius:10,background:'#eef8f0',border:'1px solid #b9d8c3'}}><strong>WhatsApp test contact</strong><p style={{fontSize:13,margin:'8px 0'}}>Open a prefilled test message to GTSC at +220 366 3800. You must tap Send inside WhatsApp; this is not an automatic payment confirmation.</p><a href={'https://wa.me/2203663800?text='+encodeURIComponent('GTSC SANDBOX TEST — NO PAYMENT RECEIVED. This is not a valid ticket or confirmed booking. Test hold reference: '+checkoutReservationId+'. Journey: '+origin+' to '+destination+'. Please do not use this message as payment proof.')} target="_blank" rel="noopener noreferrer" style={{display:'inline-block',background:'#267c49',color:'#fff',padding:'11px 14px',borderRadius:9,fontWeight:700,textDecoration:'none'}}>Open GTSC WhatsApp test message</a></div>}

@@ -1,6 +1,7 @@
 'use client';
 import {useState} from 'react';
 export default function BookingRequestForm({service,origin,destination,date}:{service:string;origin:string;destination:string;date:string}){
+ const [passengerName,setPassengerName]=useState('');
  const [phone,setPhone]=useState('');const [email,setEmail]=useState('');
  const [consent,setConsent]=useState(false);const [busy,setBusy]=useState(false);
  const [message,setMessage]=useState('');const [ref,setRef]=useState('');
@@ -9,7 +10,7 @@ export default function BookingRequestForm({service,origin,destination,date}:{se
  async function submit(e:React.FormEvent){
   e.preventDefault();setBusy(true);setMessage('');setRef('');
   try{
-   const resp=await fetch('/api/booking-requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service,origin,destination,date,phone:phone.trim(),email:email.trim(),preferredSeat,consent,website})});
+   const resp=await fetch('/api/booking-requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({passengerName:passengerName.trim(),service,origin,destination,date,phone:phone.trim(),email:email.trim(),preferredSeat,consent,website})});
    const data=await resp.json();
    if(!resp.ok)throw Error(data.error||'Could not submit');
    setRef(data.requestId);setMessage(data.notice);
@@ -21,11 +22,12 @@ export default function BookingRequestForm({service,origin,destination,date}:{se
   <p style={{fontSize:13}}>You can submit an online request for any listed route, with an optional seat preference. For services without a scheduled, priced departure, this does not reserve a real seat. GTSC staff must verify the bus and seat before confirmation. Sandbox only: no payment or travel ticket.</p>
   <p><strong>{service}</strong>: {origin} → {destination}, {date||'choose a date above'}</p>
   <form onSubmit={submit} style={{display:'grid',gap:12}}>
-   <label>Contact or WhatsApp number (+220…)<input required type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+2203663800" pattern="[+][1-9][0-9]{7,14}" style={input}/></label>
+   <label>Passenger full name (required)<input required type="text" minLength={2} maxLength={100} autoComplete="name" value={passengerName} onChange={e=>setPassengerName(e.target.value)} placeholder="First and last name" style={input}/></label>
+   <label>Phone number (required, e.g. +220…)<input required type="tel" autoComplete="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+2203663800" pattern="[+][1-9][0-9]{7,14}" style={input}/></label>
    <label>Preferred seat (optional — a request, not a reservation)
     <select value={preferredSeat??''} onChange={e=>setPreferredSeat(e.target.value?Number(e.target.value):null)} style={input}><option value="">Any available seat</option>{Array.from({length:40},(_,i)=>i+1).map(n=><option value={n} key={n}>Seat {n}</option>)}</select>
    </label>
-   <label>Email (optional)<input type="email" value={email} onChange={e=>setEmail(e.target.value)} style={input}/></label>
+   <label>Email address (optional)<input type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} style={input}/></label>
    <label style={{display:'flex',gap:9,fontSize:13}}><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} required/> I consent to GTSC contacting me about this request. No seat or departure is confirmed and no payment is collected.</label>
    <div style={{position:'absolute',left:'-10000px'}} aria-hidden="true"><input tabIndex={-1} value={website} onChange={e=>setWebsite(e.target.value)}/></div>
    <button type="submit" disabled={!consent||!date||!destination||busy} style={{background:'#237b47',color:'#fff',border:0,borderRadius:9,padding:12,fontWeight:700}}>{busy?'Submitting…':'Request booking and preferred seat'}</button>

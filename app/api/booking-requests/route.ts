@@ -6,6 +6,7 @@ export const runtime='nodejs';
 export const dynamic='force-dynamic';
 const headers={'Cache-Control':'no-store'};
 const schema=z.object({
+ passengerName:z.string().trim().min(2).max(100),
  service:z.string().min(2).max(100),
  origin:z.string().min(2).max(120),
  destination:z.string().min(2).max(120),
@@ -26,7 +27,7 @@ export async function POST(req:Request){
  let body:unknown;
  try{body=JSON.parse(text);}catch{return NextResponse.json({error:'Invalid JSON'},{status:400,headers});}
  const parsed=schema.safeParse(body);
- if(!parsed.success)return NextResponse.json({error:'Enter a valid phone number in international format, a future date, and consent to contact.'},{status:400,headers});
+ if(!parsed.success)return NextResponse.json({error:'Enter passenger name, a phone number in international format, a future date and consent to contact. Email is optional.'},{status:400,headers});
  const v=parsed.data;
  if(v.website)return NextResponse.json({requestReceived:true,status:'pending_review',ticketIssued:false,paymentCollected:false},{status:202,headers});
  if(!allowedRequestRoute(v.service,v.origin,v.destination))
@@ -44,10 +45,10 @@ export async function POST(req:Request){
   const volume=await pool.query("SELECT count(*)::int AS n FROM public.booking_requests WHERE contact_phone=$1 AND created_at>now()-interval '24 hours'",[phone]);
   if(volume.rows[0]?.n>=3)return NextResponse.json({error:'Request limit reached for this contact. Please speak with the booking desk.'},{status:429,headers});
   const saved=await pool.query(`INSERT INTO public.booking_requests
-     (service,origin,destination,preferred_date,preferred_time,contact_phone,contact_email,preferred_seat,contact_consent)
-     VALUES($1,$2,$3,$4,$5,$6,$7,$8,true)
+     (service,origin,destination,preferred_date,preferred_time,contact_phone,contact_email,preferred_seat,passenger_name,contact_consent)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,true)
      ON CONFLICT DO NOTHING RETURNING id`,
-     [v.service,v.origin,v.destination,v.date,v.preferredTime||null,phone,v.email||null,v.preferredSeat]);
+     [v.service,v.origin,v.destination,v.date,v.preferredTime||null,phone,v.email||null,v.preferredSeat,v.passengerName]);
   if(saved.rowCount!==1)return NextResponse.json({error:'A matching pending request already exists for this contact and date.'},{status:409,headers});
   return NextResponse.json({
    requestId:saved.rows[0].id,status:'pending_review',requestReceived:true,
