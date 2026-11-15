@@ -69,6 +69,7 @@ export default function BookingDemo(){
  }
  return <main style={{maxWidth:800,margin:'0 auto',color:'#12372d'}}>
    <header style={{background:'#064c3b',color:'white',padding:24,borderRadius:16,marginBottom:20}}>
+     <div style={{background:'#fff',display:'inline-flex',alignItems:'center',padding:'10px 14px',borderRadius:12,maxWidth:'100%',marginBottom:12}}><img src="/gtsc-logo.png" alt="Gambia Transport Service Company logo" width={382} height={94} style={{maxWidth:'100%',height:'auto',objectFit:'contain'}}/></div>
      <div style={{fontSize:12,letterSpacing:2}}>GAMBIA TRANSPORT SERVICE COMPANY</div><h1 style={{margin:'8px 0'}}>GTSC Bus Booking</h1>
      <p style={{margin:0}}>Search journeys and explore seat selection</p>
      <p style={{fontSize:13,marginBottom:0,color:'#d4f4e3'}}>Development demonstration — not an official ticketing service. No payments or tickets available.</p>
@@ -105,7 +106,7 @@ export default function BookingDemo(){
    </section>}
    <Timetable/>
    <section style={panel}><h2 style={heading}>Approved fare guide</h2><p style={{fontSize:13,color:'#596e64'}}>Amounts approved by the project owner for this app. Dakar is D1,500 based on the agreed conversion of 12,000 CFA; other figures came from the fare list provided. These are not yet connected to chargeable scheduled trips. GTSC operations and merchant go-live checks remain outstanding.</p>{(['international','regular','express','urban'] as const).map(group=><details key={group} style={{borderTop:'1px solid #dce6dd',padding:'12px 0'}}><summary style={{cursor:'pointer',fontWeight:700,textTransform:'capitalize'}}>{group} ({REFERENCE_FARES[group].length} listed fares)</summary><div style={{overflowX:'auto'}}><table style={{borderCollapse:'collapse',width:'100%',marginTop:12}}><thead><tr><th style={{textAlign:'left',padding:8}}>Destination</th><th style={{textAlign:'right',padding:8}}>Reference fare</th></tr></thead><tbody>{REFERENCE_FARES[group].map(item=><tr key={item.destination}><td style={{padding:8,borderTop:'1px solid #ecf0eb'}}>{item.destination}{item.note&&<span style={{display:'block',fontSize:12,color:'#697a6d'}}>{item.note}</span>}</td><td style={{padding:8,borderTop:'1px solid #ecf0eb',textAlign:'right',whiteSpace:'nowrap'}}>{fareLabel(item)}</td></tr>)}</tbody></table></div></details>)}<p style={{fontSize:12}}>Historical regular route Basse anomaly: D20 also appears in the source alongside D220. D20 has not been adopted as a fare in this prototype.</p></section>
-   <footer style={{fontSize:12,color:'#65796b',marginTop:25}}>GTSC booking prototype · Fares approved for the app. Live departure schedules, payment processing and ticket issuance remain disabled pending operational verification.</footer>
+   <footer style={{fontSize:12,color:'#65796b',marginTop:25,textAlign:'center',paddingBottom:18}}>GTSC booking prototype · Fares approved for the app. Live departure schedules, payment processing and ticket issuance remain disabled pending operational verification.<div style={{marginTop:10}}>Developed by <a href="https://www.nwebplus.gm" target="_blank" rel="noopener noreferrer" style={{fontWeight:700,color:'#064c3b',textDecoration:'underline'}}>N-WEB PLUS</a></div></footer>
   </main>;
 }
 const panel:React.CSSProperties={background:'white',padding:22,borderRadius:16,marginBottom:18,boxShadow:'0 3px 18px rgba(0,0,0,.06)'};
