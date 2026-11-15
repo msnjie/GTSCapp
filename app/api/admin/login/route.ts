@@ -1,6 +1,6 @@
 import {NextResponse} from 'next/server';
 import {pool} from '../../../../lib/db';
-import {checkPassword,configured,ipDigest,originAllowed,setSession} from '../../../../lib/admin-auth';
+import {checkPassword,getAdminCredential,configured,ipDigest,originAllowed,setSession} from '../../../../lib/admin-auth';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 const headers={'Cache-Control':'no-store'};
@@ -18,10 +18,12 @@ export async function POST(req:Request){
       AND created_at>now()-interval '15 minutes'`,[hash]);
   if(Number(recent.rows[0]?.n)>=12)
    return NextResponse.json({error:'Too many login attempts. Try again later.'},{status:429,headers});
-  const ok=checkPassword(p.password);
+  const credential=await getAdminCredential();
+  const hash=credential.password_hash||process.env.GTSC_ADMIN_PASSWORD_HASH||'';
+  const ok=checkPassword(p.password,hash);
   await pool.query('INSERT INTO public.admin_login_attempts(ip_hash,succeeded) VALUES($1,$2)',[hash,ok]);
   if(!ok)return NextResponse.json({error:'Invalid credentials'},{status:401,headers});
-  await setSession();
+  await setSession(credential.session_version);
   return NextResponse.json({authenticated:true},{headers});
  }catch{return NextResponse.json({error:'Admin login temporarily unavailable'},{status:503,headers});}
 }

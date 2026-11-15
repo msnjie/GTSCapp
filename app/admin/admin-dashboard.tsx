@@ -11,7 +11,11 @@ const card:React.CSSProperties={background:'#fff',padding:20,borderRadius:14,bor
 function date(x:string){return x?new Date(x).toLocaleString('en-GB',{timeZone:'Africa/Banjul'}):'—';}
 export default function AdminDashboard({initiallyAuthenticated}:{initiallyAuthenticated:boolean}){
  const [auth,setAuth]=useState(initiallyAuthenticated),[password,setPassword]=useState(''),[data,setData]=useState<Overview|null>(null);
- const [error,setError]=useState(''),[busy,setBusy]=useState(false),[tab,setTab]=useState<'requests'|'departures'|'holds'|'payments'>('requests');
+ const [error,setError]=useState(''),[busy,setBusy]=useState(false),[tab,setTab]=useState<'requests'|'departures'|'holds'|'payments'|'settings'>('requests');
+ const [currentPassword,setCurrentPassword]=useState('');
+ const [newPassword,setNewPassword]=useState('');
+ const [confirmPassword,setConfirmPassword]=useState('');
+ const [passwordMessage,setPasswordMessage]=useState('');
  useEffect(()=>{if(initiallyAuthenticated)void load();},[initiallyAuthenticated]);
  async function load(){
   setBusy(true);setError('');
@@ -24,6 +28,17 @@ export default function AdminDashboard({initiallyAuthenticated}:{initiallyAuthen
   try{const r=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password})});const d=await r.json();if(!r.ok)throw Error(d.error||'Login failed');setAuth(true);setPassword('');
     const v=await fetch('/api/admin/overview',{cache:'no-store'});if(!v.ok)throw Error('Login succeeded but dashboard did not load');setData(await v.json());
   }catch(e){setError(e instanceof Error?e.message:'Login unavailable');}
+  finally{setBusy(false);}
+ }
+ async function changePassword(e:React.FormEvent){
+  e.preventDefault();setBusy(true);setError('');setPasswordMessage('');
+  try{
+   const resp=await fetch('/api/admin/change-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({currentPassword,newPassword,confirmPassword})});
+   const data=await resp.json();
+   if(!resp.ok)throw Error(data.error||'Password change failed');
+   setCurrentPassword('');setNewPassword('');setConfirmPassword('');setData(null);setAuth(false);
+   setPasswordMessage('Password changed successfully. Sign in with your new password. All existing admin sessions have been signed out.');
+  }catch(error){setError(error instanceof Error?error.message:'Password change failed');}
   finally{setBusy(false);}
  }
  async function logout(){await fetch('/api/admin/logout',{method:'POST'});setAuth(false);setData(null);}
@@ -45,6 +60,7 @@ export default function AdminDashboard({initiallyAuthenticated}:{initiallyAuthen
     <button type="submit" disabled={busy} style={button}>{busy?'Signing in…':'Sign in securely'}</button>
    </form>
    {error&&<p role="alert" style={{color:'#b52438'}}>{error}</p>}
+   {passwordMessage&&<p role="status" style={{color:'#237b47'}}>{passwordMessage}</p>}
   </section>:<>
    <div style={{display:'flex',justifyContent:'space-between',flexWrap:'wrap',gap:10,marginBottom:16,alignItems:'center'}}>
     <p style={{margin:0,fontSize:13}}>Sandbox environment · No real payments or valid tickets</p>
@@ -56,7 +72,7 @@ export default function AdminDashboard({initiallyAuthenticated}:{initiallyAuthen
     {(['pending_requests','total_requests','active_holds','upcoming_departures','test_tickets','payment_events'] as const).map(k=><article key={k} style={card}><div style={{fontSize:12,color:'#606684',textTransform:'capitalize'}}>{k.replace(/_/g,' ')}</div><div style={{fontSize:31,fontWeight:800,color:'#30399a'}}>{data.stats[k]??0}</div></article>)}
    </div>
    <nav aria-label="Admin sections" style={{display:'flex',gap:8,overflowX:'auto',marginBottom:17}}>
-    {(['requests','departures','holds','payments'] as const).map(x=><button key={x} onClick={()=>setTab(x)} style={{...button,background:tab===x?'#30399a':'#eceeff',color:tab===x?'white':'#30399a'}}>{x==='requests'?'Booking requests':x==='departures'?'Departures':x==='holds'?'Seat holds':'Payment tests'}</button>)}
+    {(['requests','departures','holds','payments','settings'] as const).map(x=><button key={x} onClick={()=>setTab(x)} style={{...button,background:tab===x?'#30399a':'#eceeff',color:tab===x?'white':'#30399a'}}>{x==='requests'?'Booking requests':x==='departures'?'Departures':x==='holds'?'Seat holds':x==='payments'?'Payment tests':'Settings'}</button>)}
    </nav>
    <section style={card}>
     {tab==='requests'&&<><h2>Passenger booking requests</h2><p style={{fontSize:13}}>Mark requests contacted, closed or cancelled. These statuses do not reserve seats or collect payments.</p>
@@ -68,6 +84,16 @@ export default function AdminDashboard({initiallyAuthenticated}:{initiallyAuthen
       <div style={{overflowX:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}><thead><tr>{['Service','Route','Departure (GMT)','Seats','Fare'].map(x=><th key={x} style={th}>{x}</th>)}</tr></thead><tbody>{data.trips.map(x=><tr key={x.id}><td style={td}>{x.service_name}</td><td style={td}>{x.origin} → {x.destination}</td><td style={td}>{date(x.departure_at)}</td><td style={td}>{x.occupied}/{x.capacity} occupied</td><td style={td}>D{(x.fare_bututs/100).toFixed(2)}</td></tr>)}</tbody></table></div>
     </>}
     {tab==='holds'&&<><h2>Recent seat holds and reservations</h2><div style={{overflowX:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}><thead><tr>{['Passenger','Contact','Journey','Seat','Status','Hold expiry'].map(x=><th key={x} style={th}>{x}</th>)}</tr></thead><tbody>{data.holds.map(x=><tr key={x.id}><td style={td}>{x.customer_name}</td><td style={td}>{x.customer_phone}<div>{x.customer_email||''}</div></td><td style={td}>{x.origin} → {x.destination}<div>{date(x.departure_at)}</div></td><td style={td}>{x.seat_number}</td><td style={td}>{x.status==='held'&&new Date(x.hold_expires_at)<new Date()?'expired hold':x.status}</td><td style={td}>{date(x.hold_expires_at)}</td></tr>)}</tbody></table></div></>}
+    {tab==='settings'&&<><h2>Change administrator password</h2>
+     <p style={{fontSize:13}}>Only signed-in administrators can change the password. Use at least 14 characters, including a letter and a number. All existing sessions will be invalidated.</p>
+     <form onSubmit={changePassword} style={{display:'grid',gap:12,maxWidth:460}}>
+      <label style={{display:'grid',gap:6}}>Current password<input type="password" autoComplete="current-password" minLength={8} maxLength={200} required value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)} style={input}/></label>
+      <label style={{display:'grid',gap:6}}>New password<input type="password" autoComplete="new-password" minLength={14} maxLength={200} required value={newPassword} onChange={e=>setNewPassword(e.target.value)} style={input}/></label>
+      <label style={{display:'grid',gap:6}}>Confirm new password<input type="password" autoComplete="new-password" minLength={14} maxLength={200} required value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} style={input}/></label>
+      <button type="submit" disabled={busy||newPassword.length<14||newPassword!==confirmPassword} style={button}>{busy?'Updating…':'Update password and sign out'}</button>
+     </form>
+     {passwordMessage&&<p role="status">{passwordMessage}</p>}
+    </>}
     {tab==='payments'&&<><h2>Modem Pay sandbox audit</h2><p>These are TEST events, not real payment receipts. Live checkout remains disabled.</p><div style={{overflowX:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}><thead><tr>{['Time','Event','Match status','Simulated amount'].map(x=><th key={x} style={th}>{x}</th>)}</tr></thead><tbody>{data.audits.map((x,i)=><tr key={i}><td style={td}>{date(x.created_at)}</td><td style={td}>{x.event_type}</td><td style={td}>{x.match_status}</td><td style={td}>{x.amount_bututs===null?'—':'D'+(x.amount_bututs/100).toFixed(2)}</td></tr>)}</tbody></table></div></>}
    </section>
    </>}
