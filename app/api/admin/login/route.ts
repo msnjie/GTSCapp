@@ -19,8 +19,8 @@ export async function POST(req:Request){
   if(Number(recent.rows[0]?.n)>=12)
    return NextResponse.json({error:'Too many login attempts. Try again later.'},{status:429,headers});
   const credential=await getAdminCredential();
-  const hash=credential.password_hash||process.env.GTSC_ADMIN_PASSWORD_HASH||'';
-  const ok=checkPassword(p.password,hash);
+  const storedPasswordHash=credential.password_hash||process.env.GTSC_ADMIN_PASSWORD_HASH||'';
+  const ok=checkPassword(p.password,storedPasswordHash);
   await pool.query('INSERT INTO public.admin_login_attempts(ip_hash,succeeded) VALUES($1,$2)',[hash,ok]);
   if(!ok)return NextResponse.json({error:'Invalid credentials'},{status:401,headers});
   await setSession(credential.session_version);
