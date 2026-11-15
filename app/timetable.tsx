@@ -37,5 +37,5 @@ export default function Timetable(){
    <div style={{fontSize:12,fontWeight:700,color:s.departure_time&&s.fare_bututs?'#267c49':'#906318'}}>{s.departure_time&&s.fare_bututs?'Online sandbox booking or request available — select this service above':'Online booking request available — departure or fare awaits verification'}</div>
   </article>)}</div>
   <p style={{fontSize:12,color:'#626985',marginTop:12}}>Kanifing Booking Desk: +220 7941106 · +220 877941106 · +220 877941104 · +220 9092222. Dakar Colobane: +221 78 353 04 24 · +221 78 710 24 84. Confirm departures with the terminals before travelling.</p></div>
- </section>
+ </section>;
 }
