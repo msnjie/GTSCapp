@@ -16,6 +16,8 @@ export default function AdminDashboard({initiallyAuthenticated}:{initiallyAuthen
  const [newPassword,setNewPassword]=useState('');
  const [confirmPassword,setConfirmPassword]=useState('');
  const [passwordMessage,setPasswordMessage]=useState('');
+ const [passwordError,setPasswordError]=useState('');
+ const passwordStrong=newPassword.length>=14&&newPassword.length<=200&&/[A-Za-z]/.test(newPassword)&&/[0-9]/.test(newPassword);
  useEffect(()=>{if(initiallyAuthenticated)void load();},[initiallyAuthenticated]);
  async function load(){
   setBusy(true);setError('');
@@ -31,14 +33,15 @@ export default function AdminDashboard({initiallyAuthenticated}:{initiallyAuthen
   finally{setBusy(false);}
  }
  async function changePassword(e:React.FormEvent){
-  e.preventDefault();setBusy(true);setError('');setPasswordMessage('');
+  e.preventDefault();setBusy(true);setPasswordError('');setPasswordMessage('');
+  if(!passwordStrong||newPassword!==confirmPassword){setPasswordError('Use at least 14 characters with a letter and a number, and make sure both new-password fields match.');setBusy(false);return;}
   try{
    const resp=await fetch('/api/admin/change-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({currentPassword,newPassword,confirmPassword})});
    const data=await resp.json();
-   if(!resp.ok)throw Error(data.error||'Password change failed');
+   if(!resp.ok)throw Error((data.error||'Password change failed')+(data.diagnostic?' (Reference: '+data.diagnostic+')':''));
    setCurrentPassword('');setNewPassword('');setConfirmPassword('');setData(null);setAuth(false);
    setPasswordMessage('Password changed successfully. Sign in with your new password. All existing admin sessions have been signed out.');
-  }catch(error){setError(error instanceof Error?error.message:'Password change failed');}
+  }catch(error){setPasswordError(error instanceof Error?error.message:'Password change failed');}
   finally{setBusy(false);}
  }
  async function logout(){await fetch('/api/admin/logout',{method:'POST'});setAuth(false);setData(null);}
@@ -90,7 +93,9 @@ export default function AdminDashboard({initiallyAuthenticated}:{initiallyAuthen
       <label style={{display:'grid',gap:6}}>Current password<input type="password" autoComplete="current-password" minLength={8} maxLength={200} required value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)} style={input}/></label>
       <label style={{display:'grid',gap:6}}>New password<input type="password" autoComplete="new-password" minLength={14} maxLength={200} required value={newPassword} onChange={e=>setNewPassword(e.target.value)} style={input}/></label>
       <label style={{display:'grid',gap:6}}>Confirm new password<input type="password" autoComplete="new-password" minLength={14} maxLength={200} required value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} style={input}/></label>
-      <button type="submit" disabled={busy||newPassword.length<14||newPassword!==confirmPassword} style={button}>{busy?'Updating…':'Update password and sign out'}</button>
+      <p style={{fontSize:13,margin:0,color:passwordStrong?'#237b47':'#906318'}}>{passwordStrong?'New password meets the minimum requirements.':'New password must be at least 14 characters and include at least one letter and one number.'}</p>
+      {passwordError&&<p role="alert" style={{color:'#b52438',background:'#fff1f2',padding:12,borderRadius:9,margin:0}}>{passwordError}</p>}
+      <button type="submit" disabled={busy||!passwordStrong||newPassword!==confirmPassword} style={button}>{busy?'Updating…':'Save new password'}</button>
      </form>
      {passwordMessage&&<p role="status">{passwordMessage}</p>}
     </>}

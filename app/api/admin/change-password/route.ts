@@ -23,23 +23,32 @@ export async function POST(req:Request){
  if(newPassword===currentPassword)return NextResponse.json({error:'Choose a different password'},{status:400,headers});
  const client=await pool.connect().catch(()=>null);
  if(!client)return NextResponse.json({error:'Password change unavailable'},{status:503,headers});
+ let stage:'begin'|'read'|'verify'|'hash'|'update'|'commit'='begin';
+ let committed=false;
  try{
   await client.query('BEGIN');
+  stage='read';
   const record=await client.query('SELECT password_hash,session_version FROM public.admin_credentials WHERE id=1 FOR UPDATE');
   if(record.rowCount!==1)throw new Error('Missing credential record');
   const existing=record.rows[0].password_hash||process.env.GTSC_ADMIN_PASSWORD_HASH||'';
+  stage='verify';
   if(!checkPassword(currentPassword,existing)){
    await client.query('ROLLBACK');
    return NextResponse.json({error:'Current password is incorrect'},{status:403,headers});
   }
+  stage='hash';
   const updated=hashPassword(newPassword);
+  stage='update';
   await client.query(`UPDATE public.admin_credentials SET password_hash=$1,
     session_version=session_version+1,updated_at=now() WHERE id=1`,[updated]);
+  stage='commit';
   await client.query('COMMIT');
-  await clearSession();
+  committed=true;
+  await clearSession().catch(()=>{});
   return NextResponse.json({changed:true,signInAgain:true},{headers});
- }catch{
-  await client.query('ROLLBACK').catch(()=>{});
-  return NextResponse.json({error:'Unable to save new password. Try again.'},{status:503,headers});
+ }catch(error){
+  if(!committed)await client.query('ROLLBACK').catch(()=>{});
+  console.error('GTSC admin password change failed at stage',stage,error instanceof Error?error.name:'UnknownError');
+  return NextResponse.json({error:committed?'Password saved. Please sign in again.':'Unable to save new password. Please retry or contact the administrator.',diagnostic:stage},{status:committed?200:503,headers});
  }finally{client.release();}
 }
