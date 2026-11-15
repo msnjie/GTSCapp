@@ -1,0 +1,106 @@
+'use client';
+import {useEffect,useState} from 'react';
+const SERVICES={
+ 'Express':['Banjul','Serrekunda','Brikama','Soma','Kundang','Brikama-Ba','Janjan Burreh','Bansang','Bakadaji','Basse'],
+ 'Normal':['Banjul','Faraba Banta','Bulock','Kalaji','Soma','Jareng','Kudang','Jahali','Basse']
+} as const;
+type Service=keyof typeof SERVICES;
+type Trip={id:string;origin:string;destination:string;departure_at:string;capacity:number;fare_bututs:number};
+export default function BookingDemo(){
+ const [service,setService]=useState<Service>('Express');
+ const stops:readonly string[]=SERVICES[service];
+ const [origin,setOrigin]=useState('Banjul');
+ const [destination,setDestination]=useState('Basse');
+ const [date,setDate]=useState('');
+ const [trips,setTrips]=useState<Trip[]>([]);
+ const [selectedTrip,setSelectedTrip]=useState<Trip|null>(null);
+ const [busy,setBusy]=useState(false);
+ const [message,setMessage]=useState('');
+ const [unavailable,setUnavailable]=useState<number[]>([]);
+ const [seat,setSeat]=useState<number|null>(null);
+ const [demoMode,setDemoMode]=useState(false);
+ const [customerName,setCustomerName]=useState('');
+ const [customerPhone,setCustomerPhone]=useState('');
+ const [holding,setHolding]=useState(false);
+ const [holdReceipt,setHoldReceipt]=useState('');
+ const [bookingEnabled,setBookingEnabled]=useState(false);
+ const destinations=stops.slice(Math.max(0,stops.indexOf(origin)+1));
+ const capacity=demoMode?40:selectedTrip?.capacity??0;
+ async function search(){
+  setBusy(true);setDemoMode(false);setSelectedTrip(null);setSeat(null);setHoldReceipt('');setMessage('');
+  try{
+   const resp=await fetch('/api/trips?'+new URLSearchParams({origin,destination,date}),{cache:'no-store'});
+   const data=await resp.json();
+   if(!resp.ok)throw new Error(data.error||'Unable to search');
+   setTrips(data.trips||[]);setBookingEnabled(Boolean(data.bookingEnabled));
+   setMessage(data.trips?.length?'Choose a departure below.':(data.notice||'No verified departures published for this selection.'));
+  }catch(e){setMessage(e instanceof Error?e.message:'Unable to search');}
+  finally{setBusy(false);}
+ }
+ useEffect(()=>{
+  if(!selectedTrip)return;
+  let cancelled=false;
+  async function load(){
+   try{const r=await fetch('/api/seats?'+new URLSearchParams({tripId:selectedTrip!.id}),{cache:'no-store'});const d=await r.json();if(!cancelled)setUnavailable(r.ok?d.unavailableSeats:[]);}
+   catch{if(!cancelled)setUnavailable([]);}
+  }
+  load();return()=>{cancelled=true};
+ },[selectedTrip]);
+ function chooseService(s:Service){setService(s);setOrigin('Banjul');setDestination('Basse');setSelectedTrip(null);setSeat(null);setTrips([]);setDemoMode(false);}
+ function beginDemo(){setDemoMode(true);setSelectedTrip(null);setSeat(null);setUnavailable([3,8,14,26]);setHoldReceipt('');setMessage('Sample bus seat map — example seats only, not GTSC live inventory.');}
+ async function hold(){
+  if(!selectedTrip||!bookingEnabled||!seat||!customerName.trim()||!customerPhone.trim())return;
+  setHolding(true);setMessage('');setHoldReceipt('');
+  try{
+   const resp=await fetch('/api/holds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tripId:selectedTrip.id,seatNumber:seat,customerName,customerPhone})});
+   const d=await resp.json();if(!resp.ok)throw new Error(d.error||'Reservation unsuccessful');
+   setHoldReceipt('Temporary seat hold '+d.reservationId+' expires '+new Date(d.expiresAt).toLocaleTimeString()+'. This is NOT a ticket. Payment is disabled.');
+   setUnavailable(x=>[...x,seat]);
+   setSeat(null);
+  }catch(e){setMessage(e instanceof Error?e.message:'Unable to hold seat');}
+  finally{setHolding(false);}
+ }
+ return <main style={{maxWidth:800,margin:'0 auto',color:'#12372d'}}>
+   <header style={{background:'#064c3b',color:'white',padding:24,borderRadius:16,marginBottom:20}}>
+     <div style={{fontSize:12,letterSpacing:2}}>GAMBIA TRANSPORT SERVICE COMPANY</div><h1 style={{margin:'8px 0'}}>GTSC Bus Booking</h1>
+     <p style={{margin:0}}>Search journeys and explore seat selection</p>
+     <p style={{fontSize:13,marginBottom:0,color:'#d4f4e3'}}>Development demonstration — not an official ticketing service. No payments or tickets available.</p>
+   </header>
+   <section style={panel}>
+    <h2 style={heading}>Find your journey</h2>
+    <div style={fields}>
+     <label style={field}>Bus service<select value={service} onChange={e=>chooseService(e.target.value as Service)} style={control}><option value="Express">Express</option><option value="Normal">Normal</option></select></label>
+     <label style={field}>Departure<select value={origin} onChange={e=>{const from=e.target.value;setOrigin(from);setDestination(stops.slice(stops.indexOf(from)+1)[0]||'');setSelectedTrip(null)}} style={control}>{stops.slice(0,-1).map(x=><option key={x} value={x}>{x}</option>)}</select></label>
+     <label style={field}>Destination<select value={destination} onChange={e=>setDestination(e.target.value)} style={control}>{destinations.map(x=><option key={x} value={x}>{x}</option>)}</select></label>
+     <label style={field}>Travel date<input type="date" style={control} value={date} min={new Date().toISOString().slice(0,10)} onChange={e=>setDate(e.target.value)}/></label>
+    </div>
+    <p style={{fontSize:12,color:'#596e64'}}>Stop sequences are based on a historical published GTSC trip guide; current boarding locations, timetables and fares still require GTSC approval.</p>
+    <button style={button} disabled={!date||!destination||busy} onClick={search}>{busy?'Searching…':'Search verified departures'}</button>
+    <button style={{...button,background:'#e6f0e9',color:'#064c3b',marginLeft:8}} onClick={beginDemo}>Preview sample seat map</button>
+   </section>
+   {message&&<p role="status" style={{background:'#fef8e7',padding:14,borderRadius:10}}>{message}</p>}
+   {trips.length>0&&<section style={panel}><h2 style={heading}>Available departures</h2>{trips.map(t=><button key={t.id} style={{...button,marginRight:8,marginBottom:8,background:selectedTrip?.id===t.id?'#064c3b':'#507c65'}} onClick={()=>{setSelectedTrip(t);setDemoMode(false);setSeat(null);}}>{new Date(t.departure_at).toLocaleString()} — GMD {(t.fare_bututs/100).toFixed(2)}</button>)}</section>}
+   {(demoMode||selectedTrip)&&<section style={panel}>
+    <h2 style={heading}>{demoMode?'Sample 40-seat layout':'Choose your seat'}</h2>
+    <p style={{fontSize:13,color:'#64796d'}}>Grey seats are unavailable. Select one seat. {demoMode?'This preview is local to your browser; it does not reserve a seat.':'Availability can change until the hold is confirmed.'}</p>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(5, minmax(40px, 1fr))',gap:9,maxWidth:360,margin:'18px auto'}}>
+      {Array.from({length:Math.ceil(capacity/4)},(_,r)=>[r*4+1,r*4+2,0,r*4+3,r*4+4]).flat().map((num,i)=>num===0||num>capacity?<span key={'gap'+i}/>:<button key={num} onClick={()=>setSeat(num)} disabled={unavailable.includes(num)} aria-label={'Seat '+num} aria-pressed={seat===num} style={{height:48,borderRadius:9,border:'1px solid #a1b9aa',fontWeight:700,background:unavailable.includes(num)?'#c6ceca':seat===num?'#0e6b4b':'#e7f3eb',color:unavailable.includes(num)?'#738077':seat===num?'white':'#17543f',cursor:unavailable.includes(num)?'not-allowed':'pointer'}}>{num}</button>)}
+    </div>
+    <p style={{textAlign:'center'}}>Selected seat: <strong>{seat||'None'}</strong></p>
+    {selectedTrip&&bookingEnabled&&<div style={fields}>
+      <label style={field}>Passenger name<input style={control} value={customerName} maxLength={120} onChange={e=>setCustomerName(e.target.value)}/></label>
+      <label style={field}>Phone number<input style={control} value={customerPhone} maxLength={30} onChange={e=>setCustomerPhone(e.target.value)}/></label>
+      <button style={button} disabled={!seat||!customerName.trim()||!customerPhone.trim()||holding} onClick={hold}>{holding?'Holding…':'Hold selected seat for 10 minutes'}</button>
+    </div>}
+    {demoMode&&<p style={{textAlign:'center',fontWeight:600}}>Demonstration only — no reservation created.</p>}
+    {holdReceipt&&<p role="status">{holdReceipt}</p>}
+   </section>}
+   <footer style={{fontSize:12,color:'#65796b',marginTop:25}}>GTSC booking prototype · Live bookings and Modem Pay checkout are disabled until fares, schedules and security tests are approved.</footer>
+  </main>;
+}
+const panel:React.CSSProperties={background:'white',padding:22,borderRadius:16,marginBottom:18,boxShadow:'0 3px 18px rgba(0,0,0,.06)'};
+const heading:React.CSSProperties={fontSize:21,margin:'0 0 18px'};
+const fields:React.CSSProperties={display:'flex',flexWrap:'wrap',gap:14,marginBottom:14};
+const field:React.CSSProperties={display:'flex',flexDirection:'column',gap:6,flex:'1 1 215px',fontWeight:600,fontSize:14};
+const control:React.CSSProperties={padding:'11px 12px',border:'1px solid #becdc4',borderRadius:8,fontSize:16,background:'#fff',color:'#173d30'};
+const button:React.CSSProperties={padding:'12px 16px',border:0,borderRadius:9,background:'#086847',color:'white',fontWeight:700,cursor:'pointer'};
