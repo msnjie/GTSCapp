@@ -3,9 +3,11 @@ import {useEffect,useState} from 'react';
 import {REFERENCE_FARES,referenceFare,fareLabel} from '../lib/reference-fares';
 import Timetable from './timetable';
 const SERVICES={
+ 'Nuwari Express':['Kanifing','Basse'],
+ 'Super Express':['Kanifing','Basse'],
  'Express':['Banjul','Serrekunda','Brikama','Soma','Kundang','Brikama-Ba','Janjan Burreh','Bansang','Bakadaji','Basse'],
  'Normal':['Banjul','Faraba Banta','Bulock','Kalaji','Soma','Jareng','Kudang','Jahali','Basse'],
- 'International (Dakar)':['Banjul','Dakar, Senegal'],
+ 'International (Dakar)':['Kanifing','Dakar, Senegal','Banjul'],
  'International (Bissau)':['Banjul','Bissau, Guinea-Bissau'],
  'Urban':['Banjul','Kartong','Giboroh','Kafuta','Brikama','Mandinaring','Tabokoto','Lamin']
 } as const;
@@ -24,13 +26,11 @@ export default function BookingDemo(){
  const [unavailable,setUnavailable]=useState<number[]>([]);
  const [seat,setSeat]=useState<number|null>(null);
  const [demoMode,setDemoMode]=useState(false);
- const [customerName,setCustomerName]=useState('');
- const [customerPhone,setCustomerPhone]=useState('');
  const [holding,setHolding]=useState(false);
  const [sampleCheckout,setSampleCheckout]=useState(false);
  const [holdReceipt,setHoldReceipt]=useState('');
  const [bookingEnabled,setBookingEnabled]=useState(false);
- const destinations=service==='International (Dakar)'?stops.filter(stop=>stop!==origin):service==='Urban'&&origin==='Banjul'?stops.slice(1):stops.slice(Math.max(0,stops.indexOf(origin)+1));
+ const destinations=service==='International (Dakar)'?(origin==='Dakar, Senegal'?['Banjul']:['Dakar, Senegal']):service==='Urban'&&origin==='Banjul'?stops.slice(1):stops.slice(Math.max(0,stops.indexOf(origin)+1));
  const historicalFare=referenceFare(service,origin,destination);
  const capacity=demoMode?40:selectedTrip?.capacity??0;
  async function search(){
@@ -53,15 +53,15 @@ export default function BookingDemo(){
   }
   load();return()=>{cancelled=true};
  },[selectedTrip]);
- function chooseService(s:Service){setService(s);setOrigin('Banjul');setDestination(s==='International (Dakar)'?'Dakar, Senegal':s==='International (Bissau)'?'Bissau, Guinea-Bissau':s==='Urban'?'Kartong':'Basse');setSelectedTrip(null);setSeat(null);setTrips([]);setDemoMode(false);setSampleCheckout(false);setMessage('');}
+ function chooseService(s:Service){setService(s);setOrigin(['Nuwari Express','Super Express','International (Dakar)'].includes(s)?'Kanifing':'Banjul');setDestination(s==='Nuwari Express'||s==='Super Express'?'Basse':s==='International (Dakar)'?'Dakar, Senegal':s==='International (Bissau)'?'Bissau, Guinea-Bissau':s==='Urban'?'Kartong':'Basse');setSelectedTrip(null);setSeat(null);setTrips([]);setDemoMode(false);setSampleCheckout(false);setMessage('');}
  function beginDemo(){setDemoMode(true);setSelectedTrip(null);setSeat(null);setUnavailable([3,8,14,26]);setHoldReceipt('');setSampleCheckout(false);setMessage('Sample bus seat map — example seats only, not GTSC live inventory.');}
  async function hold(){
-  if(!selectedTrip||!bookingEnabled||!seat||!customerName.trim()||!customerPhone.trim())return;
+  if(!selectedTrip||!bookingEnabled||!seat)return;
   setHolding(true);setMessage('');setHoldReceipt('');
   try{
-   const resp=await fetch('/api/holds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tripId:selectedTrip.id,seatNumber:seat,customerName,customerPhone})});
+   const resp=await fetch('/api/holds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tripId:selectedTrip.id,seatNumber:seat})});
    const d=await resp.json();if(!resp.ok)throw new Error(d.error||'Reservation unsuccessful');
-   setHoldReceipt('Temporary seat hold '+d.reservationId+' expires '+new Date(d.expiresAt).toLocaleTimeString()+'. This is NOT a ticket. Payment is disabled.');
+   setHoldReceipt('Sandbox test seat hold '+d.reservationId+' expires '+new Date(d.expiresAt).toLocaleTimeString()+'. This expires automatically and is NOT a confirmed booking, valid ticket or payment. No money was collected.');
    setUnavailable(x=>[...x,seat]);
    setSeat(null);
   }catch(e){setMessage(e instanceof Error?e.message:'Unable to hold seat');}
@@ -72,19 +72,19 @@ export default function BookingDemo(){
      <div style={{background:'#fff',display:'inline-flex',alignItems:'center',padding:'10px 14px',borderRadius:12,maxWidth:'100%',marginBottom:12}}><img src="/gtsc-logo.png" alt="Gambia Transport Service Company logo" width={382} height={94} style={{maxWidth:'100%',height:'auto',objectFit:'contain'}}/></div>
      <div style={{fontSize:12,letterSpacing:2}}>GAMBIA TRANSPORT SERVICE COMPANY</div><h1 style={{margin:'8px 0'}}>GTSC Bus Booking</h1>
      <p style={{margin:0}}>Search journeys and explore seat selection</p>
-     <p style={{fontSize:13,marginBottom:0,color:'#d4f4e3'}}>Development demonstration — not an official ticketing service. No payments or tickets available.</p>
+     <p style={{fontSize:13,marginBottom:0,color:'#d4f4e3'}}>SANDBOX BOOKING TRIAL — test holds only, automatically expire in 10 minutes. No live payments or travel tickets.</p>
    </header>
    <section style={panel}>
     <h2 style={heading}>Find your journey</h2>
     <div style={fields}>
-     <label style={field}>Bus service<select value={service} onChange={e=>chooseService(e.target.value as Service)} style={control}><option value="Express">Express</option><option value="Normal">Normal</option><option value="International (Dakar)">International (Dakar)</option><option value="International (Bissau)">International (Bissau)</option><option value="Urban">Urban</option></select></label>
-     <label style={field}>Departure<select value={origin} onChange={e=>{const from=e.target.value;setOrigin(from);setDestination(service==='International (Dakar)'?(from==='Banjul'?'Dakar, Senegal':'Banjul'):(stops.slice(stops.indexOf(from)+1)[0]||''));setSelectedTrip(null)}} style={control}>{(service==='International (Dakar)'?stops:stops.slice(0,-1)).map(x=><option key={x} value={x}>{x}</option>)}</select></label>
+     <label style={field}>Bus service<select value={service} onChange={e=>chooseService(e.target.value as Service)} style={control}><option value="Nuwari Express">Nuwari Express</option><option value="Super Express">Super Express</option><option value="Express">Express (historical route)</option><option value="Normal">Normal</option><option value="International (Dakar)">International (Dakar)</option><option value="International (Bissau)">International (Bissau)</option><option value="Urban">Urban</option></select></label>
+     <label style={field}>Departure<select value={origin} onChange={e=>{const from=e.target.value;setOrigin(from);setDestination(service==='International (Dakar)'?(from==='Dakar, Senegal'?'Banjul':'Dakar, Senegal'):(stops.slice(stops.indexOf(from)+1)[0]||''));setSelectedTrip(null)}} style={control}>{(service==='International (Dakar)'?['Kanifing','Dakar, Senegal']:stops.slice(0,-1)).map(x=><option key={x} value={x}>{x}</option>)}</select></label>
      <label style={field}>Destination<select value={destination} onChange={e=>setDestination(e.target.value)} style={control}>{destinations.map(x=><option key={x} value={x}>{x}</option>)}</select></label>
      <label style={field}>Travel date<input type="date" style={control} value={date} min={new Date().toISOString().slice(0,10)} onChange={e=>setDate(e.target.value)}/></label>
     </div>
-    <p style={{fontSize:12,color:'#596e64'}}>Fare amounts were approved for this project. Dakar has since been updated to D1,150 one-way from the supplied timetable. Boarding points, timetables, transport operators and payment merchant readiness must still be confirmed. No checkout or live reservations are enabled yet.</p>
+    <p style={{fontSize:12,color:'#596e64'}}>Fare amounts were approved for this project. Dakar has since been updated to D1,150 one-way from the supplied timetable. Boarding points, timetables, transport operators and payment merchant readiness must still be confirmed. Test seat holds only. No real bookings, ticket issuance or checkout.</p>
     <div style={{background:'#fff8df',padding:'12px 14px',borderRadius:9,marginBottom:14}}><strong>Approved fare (not payable yet): </strong>{historicalFare?fareLabel(historicalFare):'No origin-specific fare provided'}{historicalFare&&<span style={{display:'block',fontSize:12,marginTop:4}}>{historicalFare.note||'Amount approved for GTSC app; departure availability not yet published'}</span>}</div>
-    <button style={button} disabled={!date||!destination||busy} onClick={search}>{busy?'Searching…':'Search verified departures'}</button>
+    <button style={button} disabled={!date||!destination||busy} onClick={search}>{busy?'Searching…':'Find sandbox departures'}</button>
     <button style={{...button,background:'#e6f0e9',color:'#064c3b',marginLeft:8}} onClick={beginDemo}>Preview sample seat map</button>
    </section>
    {message&&<p role="status" style={{background:'#fef8e7',padding:14,borderRadius:10}}>{message}</p>}
@@ -96,17 +96,13 @@ export default function BookingDemo(){
       {Array.from({length:Math.ceil(capacity/4)},(_,r)=>[r*4+1,r*4+2,0,r*4+3,r*4+4]).flat().map((num,i)=>num===0||num>capacity?<span key={'gap'+i}/>:<button key={num} onClick={()=>{setSeat(num);setSampleCheckout(false)}} disabled={unavailable.includes(num)} aria-label={'Seat '+num} aria-pressed={seat===num} style={{height:48,borderRadius:9,border:'1px solid #a1b9aa',fontWeight:700,background:unavailable.includes(num)?'#c6ceca':seat===num?'#0e6b4b':'#e7f3eb',color:unavailable.includes(num)?'#738077':seat===num?'white':'#17543f',cursor:unavailable.includes(num)?'not-allowed':'pointer'}}>{num}</button>)}
     </div>
     <p style={{textAlign:'center'}}>Selected seat: <strong>{seat||'None'}</strong></p>
-    {selectedTrip&&bookingEnabled&&<div style={fields}>
-      <label style={field}>Passenger name<input style={control} value={customerName} maxLength={120} onChange={e=>setCustomerName(e.target.value)}/></label>
-      <label style={field}>Phone number<input style={control} value={customerPhone} maxLength={30} onChange={e=>setCustomerPhone(e.target.value)}/></label>
-      <button style={button} disabled={!seat||!customerName.trim()||!customerPhone.trim()||holding} onClick={hold}>{holding?'Holding…':'Hold selected seat for 10 minutes'}</button>
-    </div>}
+    {selectedTrip&&bookingEnabled&&<div style={fields}><p style={{fontSize:13}}>Sandbox trial: no passenger details required. This test hold expires in 10 minutes and cannot be used to travel.</p><button style={button} disabled={!seat||holding} onClick={hold}>{holding?'Holding…':'Create 10-minute TEST seat hold'}</button></div>}
     {demoMode&&<div style={{textAlign:'center'}}><p style={{fontWeight:600}}>Demonstration only — no reservation created.</p><button style={button} disabled={!seat} onClick={()=>setSampleCheckout(true)}>Preview booking summary</button>{sampleCheckout&&seat&&<div style={{background:'#edf7ef',padding:16,borderRadius:10,marginTop:12,textAlign:'left'}}><h3 style={{marginTop:0}}>Sample booking summary</h3><p><strong>Journey:</strong> {origin} → {destination}</p><p><strong>Service:</strong> {service}</p><p><strong>Travel date:</strong> {date||'Not selected'}</p><p><strong>Seat:</strong> {seat}</p><p><strong>Approved fare (not payable yet):</strong> {historicalFare?fareLabel(historicalFare):'Unavailable'} — no payable departure currently selected</p><p><strong>Payment:</strong> Disabled (sandbox setup)</p><p style={{fontSize:13}}>This is not a reservation, payment receipt or valid travel ticket. No QR code has been issued.</p></div>}</div>}
     {holdReceipt&&<p role="status">{holdReceipt}</p>}
    </section>}
    <Timetable/>
-   <section style={panel}><h2 style={heading}>Approved fare guide</h2><p style={{fontSize:13,color:'#596e64'}}>Amounts approved by the project owner for this app. Dakar is D1,500 based on the agreed conversion of 12,000 CFA; other figures came from the fare list provided. These are not yet connected to chargeable scheduled trips. GTSC operations and merchant go-live checks remain outstanding.</p>{(['international','regular','express','urban'] as const).map(group=><details key={group} style={{borderTop:'1px solid #dce6dd',padding:'12px 0'}}><summary style={{cursor:'pointer',fontWeight:700,textTransform:'capitalize'}}>{group} ({REFERENCE_FARES[group].length} listed fares)</summary><div style={{overflowX:'auto'}}><table style={{borderCollapse:'collapse',width:'100%',marginTop:12}}><thead><tr><th style={{textAlign:'left',padding:8}}>Destination</th><th style={{textAlign:'right',padding:8}}>Reference fare</th></tr></thead><tbody>{REFERENCE_FARES[group].map(item=><tr key={item.destination}><td style={{padding:8,borderTop:'1px solid #ecf0eb'}}>{item.destination}{item.note&&<span style={{display:'block',fontSize:12,color:'#697a6d'}}>{item.note}</span>}</td><td style={{padding:8,borderTop:'1px solid #ecf0eb',textAlign:'right',whiteSpace:'nowrap'}}>{fareLabel(item)}</td></tr>)}</tbody></table></div></details>)}<p style={{fontSize:12}}>Historical regular route Basse anomaly: D20 also appears in the source alongside D220. D20 has not been adopted as a fare in this prototype.</p></section>
-   <footer style={{fontSize:12,color:'#65796b',marginTop:25,textAlign:'center',paddingBottom:18}}>GTSC booking prototype · Fares approved for the app. Live departure schedules, payment processing and ticket issuance remain disabled pending operational verification.<div style={{marginTop:10}}>Developed by <a href="https://www.nwebplus.gm" target="_blank" rel="noopener noreferrer" style={{fontWeight:700,color:'#064c3b',textDecoration:'underline'}}>N-WEB PLUS</a></div></footer>
+   <section style={panel}><h2 style={heading}>Approved fare guide</h2><p style={{fontSize:13,color:'#596e64'}}>Amounts approved by the project owner for this app. Dakar is D1,150 from the more recent timetable; 12,000 CFA is a conflicting amount, not an equivalent conversion; other figures came from the fare list provided. These are not yet connected to chargeable scheduled trips. GTSC operations and merchant go-live checks remain outstanding.</p>{(['international','regular','express','urban'] as const).map(group=><details key={group} style={{borderTop:'1px solid #dce6dd',padding:'12px 0'}}><summary style={{cursor:'pointer',fontWeight:700,textTransform:'capitalize'}}>{group} ({REFERENCE_FARES[group].length} listed fares)</summary><div style={{overflowX:'auto'}}><table style={{borderCollapse:'collapse',width:'100%',marginTop:12}}><thead><tr><th style={{textAlign:'left',padding:8}}>Destination</th><th style={{textAlign:'right',padding:8}}>Reference fare</th></tr></thead><tbody>{REFERENCE_FARES[group].map(item=><tr key={item.destination}><td style={{padding:8,borderTop:'1px solid #ecf0eb'}}>{item.destination}{item.note&&<span style={{display:'block',fontSize:12,color:'#697a6d'}}>{item.note}</span>}</td><td style={{padding:8,borderTop:'1px solid #ecf0eb',textAlign:'right',whiteSpace:'nowrap'}}>{fareLabel(item)}</td></tr>)}</tbody></table></div></details>)}<p style={{fontSize:12}}>Historical regular route Basse anomaly: D20 also appears in the source alongside D220. D20 has not been adopted as a fare in this prototype.</p></section>
+   <footer style={{fontSize:12,color:'#65796b',marginTop:25,textAlign:'center',paddingBottom:18}}>GTSC SANDBOX trial · Test seat holds do not create real bookings. No payments or valid travel tickets.<div style={{marginTop:10}}>Developed by <a href="https://www.nwebplus.gm" target="_blank" rel="noopener noreferrer" style={{fontWeight:700,color:'#064c3b',textDecoration:'underline'}}>N-WEB PLUS</a></div></footer>
   </main>;
 }
 const panel:React.CSSProperties={background:'white',padding:22,borderRadius:16,marginBottom:18,boxShadow:'0 3px 18px rgba(0,0,0,.06)'};

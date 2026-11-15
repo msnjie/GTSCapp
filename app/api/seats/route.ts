@@ -3,7 +3,7 @@ import {pool} from '../../../lib/db';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){
- if(process.env.BOOKINGS_ENABLED!=='true')return NextResponse.json({error:'Live seat inventory is not enabled'},{status:503});
+ if(process.env.MODEMPAY_MODE!=='sandbox'||process.env.PAYMENTS_ENABLED!=='false'||process.env.BOOKINGS_ENABLED!=='true')return NextResponse.json({error:'Live seat inventory is not enabled'},{status:503});
  const id=new URL(request.url).searchParams.get('tripId');
  if(!id||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))return NextResponse.json({error:'Invalid trip'},{status:400});
  try{

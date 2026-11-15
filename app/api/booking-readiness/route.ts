@@ -14,6 +14,7 @@ export async function GET(){
   paymentsEnabled:process.env.PAYMENTS_ENABLED==='true',
   mode:process.env.MODEMPAY_MODE==='sandbox'?'sandbox':'not_sandbox',
   livePaymentsAvailable:false,
+  sandboxTestHoldsAvailable:process.env.MODEMPAY_MODE==='sandbox'&&process.env.PAYMENTS_ENABLED==='false'&&process.env.BOOKINGS_ENABLED==='true'&&scheduledTrips>0,
   ready:false, // Payment reconciliation and launch controls are not complete, regardless of staged inventory.
   nextStep:'Verify operational schedule and pickup points; reconcile payment vs seat hold before activating sale'
  },{headers:{'Cache-Control':'no-store'}});
