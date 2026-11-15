@@ -19,9 +19,13 @@ export async function GET(){
  if(!raw)return NextResponse.json({database:'not_configured'},{status:503,headers});
  try {
   const u=new URL(raw);
-  if(!['postgres:','postgresql:'].includes(u.protocol)||!u.hostname||!u.password||u.password==='[YOUR-PASSWORD]')return NextResponse.json({database:'invalid_connection_string'},{status:503,headers});
-  if(!u.hostname.endsWith('.pooler.supabase.com'))return NextResponse.json({database:'unexpected_database_host'},{status:503,headers});
- }catch{return NextResponse.json({database:'invalid_connection_string'},{status:503,headers});}
+  if(!['postgres:','postgresql:'].includes(u.protocol))return NextResponse.json({database:'invalid_connection_string',reason:'invalid_scheme'},{status:503,headers});
+  if(!u.hostname)return NextResponse.json({database:'invalid_connection_string',reason:'missing_hostname'},{status:503,headers});
+  if(!u.username)return NextResponse.json({database:'invalid_connection_string',reason:'missing_username'},{status:503,headers});
+  if(!u.password)return NextResponse.json({database:'invalid_connection_string',reason:'missing_password'},{status:503,headers});
+  if(u.password==='[YOUR-PASSWORD]'||u.password==='YOUR_PASSWORD')return NextResponse.json({database:'invalid_connection_string',reason:'password_placeholder'},{status:503,headers});
+  if(!u.hostname.endsWith('.pooler.supabase.com'))return NextResponse.json({database:'invalid_connection_string',reason:'unexpected_hostname'},{status:503,headers});
+ }catch{return NextResponse.json({database:'invalid_connection_string',reason:'malformed_url'},{status:503,headers});}
  try{
   const result=await pool.query("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='reservations') AS has_reservations");
   const ok=Boolean(result.rows[0]?.has_reservations);
