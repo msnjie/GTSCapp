@@ -4,7 +4,7 @@ export type FareGroup='regular'|'express'|'urban'|'international';
 export type FareReference={destination:string;amount:number;currency:'GMD';note?:string};
 export const REFERENCE_FARES:Record<FareGroup,readonly FareReference[]>={
  international:[
-  {destination:'Dakar, Senegal',amount:1500,currency:'GMD',note:'D1,500 approved for the prototype by the project owner; originally converted from 12,000 CFA. Confirm this applies to each direction before GTSC launch'},
+  {destination:'Dakar, Senegal',amount:1150,currency:'GMD',note:'Updated timetable supplies D1,150 one-way in each direction; 12,000 CFA is a separate conflicting figure and is not an equivalent conversion. Confirm before launch'},
   {destination:'Bissau, Guinea-Bissau',amount:700,currency:'GMD',note:'D700 approved by the project owner; confirm Bissau service with GTSC'}
  ],
  regular:[
@@ -52,6 +52,8 @@ export const REFERENCE_FARES:Record<FareGroup,readonly FareReference[]>={
  ]
 };
 export function referenceFare(service:string,origin:string,destination:string):FareReference|undefined{
+ if(service==='Nuwari Express'&&origin==='Kanifing'&&destination==='Basse')return {destination:'Basse',amount:750,currency:'GMD'};
+ if(service==='Super Express'&&origin==='Kanifing'){const amounts:Record<string,number>={'Basse':650,'Soma':300,'Brikama Ba':350,'Janjanbureh':400,'Bansang':400,'Bakadaji':450};return amounts[destination]===undefined?undefined:{destination,amount:amounts[destination],currency:'GMD'};}
  if(service==='International (Dakar)'&&destination==='Dakar, Senegal'||service==='International (Dakar)'&&origin==='Dakar, Senegal')return REFERENCE_FARES.international[0];
  if(service==='International (Bissau)'&&origin==='Banjul'&&destination==='Bissau, Guinea-Bissau')return REFERENCE_FARES.international[1];
  if(origin!=='Banjul')return undefined; // No origin-specific rates supplied for intermediate boardings.
