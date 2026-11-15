@@ -21,7 +21,7 @@ export default function BookingRequestForm({service,origin,destination,date}:{se
   <p style={{fontSize:13}}>You can submit an online request for any listed route, with an optional seat preference. For services without a scheduled, priced departure, this does not reserve a real seat. GTSC staff must verify the bus and seat before confirmation. Sandbox only: no payment or travel ticket.</p>
   <p><strong>{service}</strong>: {origin} → {destination}, {date||'choose a date above'}</p>
   <form onSubmit={submit} style={{display:'grid',gap:12}}>
-   <label>Contact or WhatsApp number (+220…)<input required type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+2203663800" pattern="\\+[1-9][0-9]{7,14}" style={input}/></label>
+   <label>Contact or WhatsApp number (+220…)<input required type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+2203663800" pattern="[+][1-9][0-9]{7,14}" style={input}/></label>
    <label>Preferred seat (optional — a request, not a reservation)
     <select value={preferredSeat??''} onChange={e=>setPreferredSeat(e.target.value?Number(e.target.value):null)} style={input}><option value="">Any available seat</option>{Array.from({length:40},(_,i)=>i+1).map(n=><option value={n} key={n}>Seat {n}</option>)}</select>
    </label>
