@@ -4,7 +4,12 @@ import {pool} from '../../../../lib/db';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 const headers={'Cache-Control':'no-store'};
-const json=(body:object,status:number)=>NextResponse.json(body,{status,headers});
+const json=(body:Record<string,unknown>,status:number)=>{
+ // Log only static response categories. Never log webhook headers, bodies, signatures or secrets.
+ const category=typeof body.error==='string'?body.error:status===200?'Accepted':'Other';
+ console.info('GTSC webhook delivery',JSON.stringify({status,category}));
+ return NextResponse.json(body,{status,headers});
+};
 
 // Sandbox-only ingestion. This intentionally NEVER confirms a reservation or
 // issues a ticket. Live event processing requires a separately reviewed flow.
