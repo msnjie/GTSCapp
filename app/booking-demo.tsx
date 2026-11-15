@@ -30,11 +30,15 @@ export default function BookingDemo(){
  const [sampleCheckout,setSampleCheckout]=useState(false);
  const [holdReceipt,setHoldReceipt]=useState('');
  const [bookingEnabled,setBookingEnabled]=useState(false);
+ const [checkoutReservationId,setCheckoutReservationId]=useState('');
+ const [checkoutBusy,setCheckoutBusy]=useState(false);
+ const [checkoutUrl,setCheckoutUrl]=useState('');
+ const [checkoutError,setCheckoutError]=useState('');
  const destinations=service==='International (Dakar)'?(origin==='Dakar, Senegal'?['Banjul']:['Dakar, Senegal']):service==='Urban'&&origin==='Banjul'?stops.slice(1):stops.slice(Math.max(0,stops.indexOf(origin)+1));
  const historicalFare=referenceFare(service,origin,destination);
  const capacity=demoMode?40:selectedTrip?.capacity??0;
  async function search(){
-  setBusy(true);setDemoMode(false);setSelectedTrip(null);setSeat(null);setHoldReceipt('');setMessage('');
+  setBusy(true);setDemoMode(false);setSelectedTrip(null);setSeat(null);setHoldReceipt('');setCheckoutReservationId('');setCheckoutUrl('');setCheckoutError('');setMessage('');
   try{
    const resp=await fetch('/api/trips?'+new URLSearchParams({origin,destination,date,service}),{cache:'no-store'});
    const data=await resp.json();
@@ -53,14 +57,29 @@ export default function BookingDemo(){
   }
   load();return()=>{cancelled=true};
  },[selectedTrip]);
- function chooseService(s:Service){setService(s);setOrigin(['Nuwari Express','Super Express','International (Dakar)'].includes(s)?'Kanifing':'Banjul');setDestination(s==='Nuwari Express'||s==='Super Express'?'Basse':s==='International (Dakar)'?'Dakar, Senegal':s==='International (Bissau)'?'Bissau, Guinea-Bissau':s==='Urban'?'Kartong':'Basse');setSelectedTrip(null);setSeat(null);setTrips([]);setDemoMode(false);setSampleCheckout(false);setMessage('');}
- function beginDemo(){setDemoMode(true);setSelectedTrip(null);setSeat(null);setUnavailable([3,8,14,26]);setHoldReceipt('');setSampleCheckout(false);setMessage('Sample bus seat map — example seats only, not GTSC live inventory.');}
+ function chooseService(s:Service){setService(s);setOrigin(['Nuwari Express','Super Express','International (Dakar)'].includes(s)?'Kanifing':'Banjul');setDestination(s==='Nuwari Express'||s==='Super Express'?'Basse':s==='International (Dakar)'?'Dakar, Senegal':s==='International (Bissau)'?'Bissau, Guinea-Bissau':s==='Urban'?'Kartong':'Basse');setSelectedTrip(null);setSeat(null);setTrips([]);setDemoMode(false);setSampleCheckout(false);setCheckoutReservationId('');setCheckoutUrl('');setCheckoutError('');setMessage('');}
+ function beginDemo(){setDemoMode(true);setSelectedTrip(null);setSeat(null);setUnavailable([3,8,14,26]);setHoldReceipt('');setCheckoutReservationId('');setCheckoutUrl('');setCheckoutError('');setSampleCheckout(false);setMessage('Sample bus seat map — example seats only, not GTSC live inventory.');}
+ async function beginSandboxCheckout(){
+  if(!checkoutReservationId||checkoutBusy)return;
+  setCheckoutBusy(true);setCheckoutError('');setCheckoutUrl('');
+  try{
+   const r=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reservationId:checkoutReservationId})});
+   const d=await r.json();
+   if(!r.ok)throw new Error(d.error||'Sandbox checkout is unavailable');
+   const link=new URL(d.checkoutUrl);
+   if(link.protocol!=='https:'||link.hostname!=='test.checkout.modempay.com')throw new Error('Unexpected test checkout address');
+   setCheckoutUrl(link.toString());
+  }catch(e){setCheckoutError(e instanceof Error?e.message:'Could not open sandbox checkout');}
+  finally{setCheckoutBusy(false);}
+ }
  async function hold(){
   if(!selectedTrip||!bookingEnabled||!seat)return;
   setHolding(true);setMessage('');setHoldReceipt('');
   try{
    const resp=await fetch('/api/holds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tripId:selectedTrip.id,seatNumber:seat})});
    const d=await resp.json();if(!resp.ok)throw new Error(d.error||'Reservation unsuccessful');
+   setCheckoutReservationId(d.reservationId);
+   setCheckoutUrl('');setCheckoutError('');
    setHoldReceipt('Sandbox test seat hold '+d.reservationId+' expires '+new Date(d.expiresAt).toLocaleTimeString()+'. This expires automatically and is NOT a confirmed booking, valid ticket or payment. No money was collected.');
    setUnavailable(x=>[...x,seat]);
    setSeat(null);
@@ -72,7 +91,7 @@ export default function BookingDemo(){
      <div style={{background:'#fff',display:'inline-flex',alignItems:'center',padding:'10px 14px',borderRadius:12,maxWidth:'100%',marginBottom:12}}><img src="/gtsc-logo.png" alt="Gambia Transport Service Company logo" width={382} height={94} style={{maxWidth:'100%',height:'auto',objectFit:'contain'}}/></div>
      <div style={{fontSize:12,letterSpacing:2}}>GAMBIA TRANSPORT SERVICE COMPANY</div><h1 style={{margin:'8px 0'}}>GTSC Bus Booking</h1>
      <p style={{margin:0}}>Search journeys and explore seat selection</p>
-     <p style={{fontSize:13,marginBottom:0,color:'#d4f4e3'}}>SANDBOX BOOKING TRIAL — test holds only, automatically expire in 10 minutes. No live payments or travel tickets.</p>
+     <p style={{fontSize:13,marginBottom:0,color:'#d4f4e3'}}>SANDBOX BOOKING TRIAL — test holds only, automatically expire in 10 minutes. No real charges or travel tickets. Optional Modem Pay TEST checkout can be used for simulation.</p>
    </header>
    <section style={panel}>
     <h2 style={heading}>Find your journey</h2>
@@ -82,7 +101,7 @@ export default function BookingDemo(){
      <label style={field}>Destination<select value={destination} onChange={e=>setDestination(e.target.value)} style={control}>{destinations.map(x=><option key={x} value={x}>{x}</option>)}</select></label>
      <label style={field}>Travel date<input type="date" style={control} value={date} min={new Date().toISOString().slice(0,10)} onChange={e=>setDate(e.target.value)}/></label>
     </div>
-    <p style={{fontSize:12,color:'#596e64'}}>Fare amounts were approved for this project. Dakar has since been updated to D1,150 one-way from the supplied timetable. Boarding points, timetables, transport operators and payment merchant readiness must still be confirmed. Test seat holds only. No real bookings, ticket issuance or checkout.</p>
+    <p style={{fontSize:12,color:'#596e64'}}>Fare amounts were approved for this project. Dakar has since been updated to D1,150 one-way from the supplied timetable. Boarding points, timetables, transport operators and payment merchant readiness must still be confirmed. Test seat holds and TEST payment checkout only. No real bookings, ticket issuance or live charges.</p>
     <div style={{background:'#fff8df',padding:'12px 14px',borderRadius:9,marginBottom:14}}><strong>Approved fare (not payable yet): </strong>{historicalFare?fareLabel(historicalFare):'No origin-specific fare provided'}{historicalFare&&<span style={{display:'block',fontSize:12,marginTop:4}}>{historicalFare.note||'Amount approved for GTSC app; departure availability not yet published'}</span>}</div>
     <button style={button} disabled={!date||!destination||busy} onClick={search}>{busy?'Searching…':'Find sandbox departures'}</button>
     <button style={{...button,background:'#e6f0e9',color:'#064c3b',marginLeft:8}} onClick={beginDemo}>Preview sample seat map</button>
@@ -99,10 +118,11 @@ export default function BookingDemo(){
     {selectedTrip&&bookingEnabled&&<div style={fields}><p style={{fontSize:13}}>Sandbox trial: no passenger details required. This test hold expires in 10 minutes and cannot be used to travel.</p><button style={button} disabled={!seat||holding} onClick={hold}>{holding?'Holding…':'Create 10-minute TEST seat hold'}</button></div>}
     {demoMode&&<div style={{textAlign:'center'}}><p style={{fontWeight:600}}>Demonstration only — no reservation created.</p><button style={button} disabled={!seat} onClick={()=>setSampleCheckout(true)}>Preview booking summary</button>{sampleCheckout&&seat&&<div style={{background:'#edf7ef',padding:16,borderRadius:10,marginTop:12,textAlign:'left'}}><h3 style={{marginTop:0}}>Sample booking summary</h3><p><strong>Journey:</strong> {origin} → {destination}</p><p><strong>Service:</strong> {service}</p><p><strong>Travel date:</strong> {date||'Not selected'}</p><p><strong>Seat:</strong> {seat}</p><p><strong>Approved fare (not payable yet):</strong> {historicalFare?fareLabel(historicalFare):'Unavailable'} — no payable departure currently selected</p><p><strong>Payment:</strong> Disabled (sandbox setup)</p><p style={{fontSize:13}}>This is not a reservation, payment receipt or valid travel ticket. No QR code has been issued.</p></div>}</div>}
     {holdReceipt&&<p role="status">{holdReceipt}</p>}
+    {checkoutReservationId&&!demoMode&&<div style={{border:'1px solid #e3c97f',borderRadius:10,padding:14,marginTop:12,background:'#fffaf0'}}><strong>Modem Pay sandbox test</strong><p style={{fontSize:13}}>Only use the Modem Pay TEST checkout page. It does not confirm the GTSC booking or issue a ticket. The seat hold expires in 10 minutes even if payment is still in progress.</p><button style={button} disabled={checkoutBusy} onClick={beginSandboxCheckout}>{checkoutBusy?'Preparing test payment…':'Create Modem Pay TEST payment link'}</button>{checkoutUrl&&<p><a href={checkoutUrl} target="_blank" rel="noopener noreferrer" style={{fontWeight:700,color:'#064c3b',textDecoration:'underline'}}>Open secure Modem Pay TEST checkout</a></p>}{checkoutError&&<p role="alert">{checkoutError}</p>}</div>}
    </section>}
    <Timetable/>
    <section style={panel}><h2 style={heading}>Approved fare guide</h2><p style={{fontSize:13,color:'#596e64'}}>Amounts approved by the project owner for this app. Dakar is D1,150 from the more recent timetable; 12,000 CFA is a conflicting amount, not an equivalent conversion; other figures came from the fare list provided. These are not yet connected to chargeable scheduled trips. GTSC operations and merchant go-live checks remain outstanding.</p>{(['international','regular','express','urban'] as const).map(group=><details key={group} style={{borderTop:'1px solid #dce6dd',padding:'12px 0'}}><summary style={{cursor:'pointer',fontWeight:700,textTransform:'capitalize'}}>{group} ({REFERENCE_FARES[group].length} listed fares)</summary><div style={{overflowX:'auto'}}><table style={{borderCollapse:'collapse',width:'100%',marginTop:12}}><thead><tr><th style={{textAlign:'left',padding:8}}>Destination</th><th style={{textAlign:'right',padding:8}}>Reference fare</th></tr></thead><tbody>{REFERENCE_FARES[group].map(item=><tr key={item.destination}><td style={{padding:8,borderTop:'1px solid #ecf0eb'}}>{item.destination}{item.note&&<span style={{display:'block',fontSize:12,color:'#697a6d'}}>{item.note}</span>}</td><td style={{padding:8,borderTop:'1px solid #ecf0eb',textAlign:'right',whiteSpace:'nowrap'}}>{fareLabel(item)}</td></tr>)}</tbody></table></div></details>)}<p style={{fontSize:12}}>Historical regular route Basse anomaly: D20 also appears in the source alongside D220. D20 has not been adopted as a fare in this prototype.</p></section>
-   <footer style={{fontSize:12,color:'#65796b',marginTop:25,textAlign:'center',paddingBottom:18}}>GTSC SANDBOX trial · Test seat holds do not create real bookings. No payments or valid travel tickets.<div style={{marginTop:10}}>Developed by <a href="https://www.nwebplus.gm" target="_blank" rel="noopener noreferrer" style={{fontWeight:700,color:'#064c3b',textDecoration:'underline'}}>N-WEB PLUS</a></div></footer>
+   <footer style={{fontSize:12,color:'#65796b',marginTop:25,textAlign:'center',paddingBottom:18}}>GTSC SANDBOX trial · Test seat holds do not create real bookings. Only sandbox payment simulation. No real charges, confirmed reservations or valid travel tickets.<div style={{marginTop:10}}>Developed by <a href="https://www.nwebplus.gm" target="_blank" rel="noopener noreferrer" style={{fontWeight:700,color:'#064c3b',textDecoration:'underline'}}>N-WEB PLUS</a></div></footer>
   </main>;
 }
 const panel:React.CSSProperties={background:'white',padding:22,borderRadius:16,marginBottom:18,boxShadow:'0 3px 18px rgba(0,0,0,.06)'};

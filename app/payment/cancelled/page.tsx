@@ -1,0 +1,1 @@
+export default function Cancelled(){return <main style={{maxWidth:620,margin:'10vh auto',padding:24,fontFamily:'system-ui',color:'#12372d'}}><h1>Sandbox checkout cancelled</h1><p>No confirmed booking or travel ticket was issued. Your temporary seat hold will expire automatically.</p><a href="/">Return to GTSC test booking</a></main>}
