@@ -38,6 +38,7 @@ export default function BookingDemo(){
  const [holdReceipt,setHoldReceipt]=useState('');
  const [bookingEnabled,setBookingEnabled]=useState(false);
  const [checkoutReservationId,setCheckoutReservationId]=useState('');
+ const [ticketAccessToken,setTicketAccessToken]=useState('');
  const [checkoutBusy,setCheckoutBusy]=useState(false);
  const [checkoutUrl,setCheckoutUrl]=useState('');
  const [checkoutError,setCheckoutError]=useState('');
@@ -47,7 +48,7 @@ export default function BookingDemo(){
  const historicalFare=referenceFare(service,origin,destination);
  const capacity=demoMode?40:selectedTrip?.capacity??0;
  async function search(){
-  setBusy(true);setDemoMode(false);setSelectedTrip(null);setSeat(null);setHoldReceipt('');setCheckoutReservationId('');setCheckoutUrl('');setCheckoutError('');setMessage('');
+  setBusy(true);setDemoMode(false);setSelectedTrip(null);setSeat(null);setHoldReceipt('');setCheckoutReservationId('');setTicketAccessToken('');setCheckoutUrl('');setCheckoutError('');setMessage('');
   try{
    const resp=await fetch('/api/trips?'+new URLSearchParams({origin,destination,date,service}),{cache:'no-store'});
    const data=await resp.json();
@@ -96,8 +97,9 @@ export default function BookingDemo(){
    const resp=await fetch('/api/holds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tripId:selectedTrip.id,seatNumber:seat})});
    const d=await resp.json();if(!resp.ok)throw new Error(d.error||'Reservation unsuccessful');
    setCheckoutReservationId(d.reservationId);
+   setTicketAccessToken(typeof d.accessToken==='string'?d.accessToken:'');
    setCheckoutUrl('');setCheckoutError('');
-   setHoldReceipt('Sandbox test seat hold '+d.reservationId+' expires '+new Date(d.expiresAt).toLocaleTimeString()+'. This expires automatically and is NOT a confirmed booking, valid ticket or payment. No money was collected.');
+   setHoldReceipt('Sandbox test seat hold '+d.reservationId+' expires '+new Date(d.expiresAt).toLocaleTimeString()+'. It is NOT a confirmed booking or valid travel ticket. No money was collected. Successful simulated payment before expiry can issue a test ticket.');
    setUnavailable(x=>[...x,seat]);
    setSeat(null);
   }catch(e){setMessage(e instanceof Error?e.message:'Unable to hold seat');}
@@ -139,7 +141,8 @@ export default function BookingDemo(){
     {holdReceipt&&<p role="status">{holdReceipt}</p>}
     {checkoutReservationId&&!demoMode&&<div style={{margin:'12px 0',padding:14,borderRadius:10,background:'#eef8f0',border:'1px solid #bdd8c5'}}><strong>WhatsApp test contact</strong><p style={{fontSize:13,margin:'8px 0'}}>Open a prefilled test message to GTSC at +220 366 3800. You must tap Send inside WhatsApp; this is not an automatic payment confirmation.</p><a href={'https://wa.me/2203663800?text='+encodeURIComponent('GTSC SANDBOX TEST — NO PAYMENT RECEIVED. This is not a valid ticket or confirmed booking. Test hold reference: '+checkoutReservationId+'. Journey: '+origin+' to '+destination+'. Please do not use this message as payment proof.')} target="_blank" rel="noopener noreferrer" style={{display:'inline-block',background:'#146b42',color:'#fff',padding:'11px 14px',borderRadius:9,fontWeight:700,textDecoration:'none'}}>Open GTSC WhatsApp test message</a></div>}
 
-    {checkoutReservationId&&!demoMode&&<div style={{border:'1px solid #e3c97f',borderRadius:10,padding:14,marginTop:12,background:'#fffaf0'}}><strong>Modem Pay sandbox test</strong><p style={{fontSize:13}}>Only use the Modem Pay TEST checkout page. It does not confirm the GTSC booking or issue a ticket. The seat hold expires in 10 minutes even if payment is still in progress.</p><button style={button} disabled={checkoutBusy} onClick={beginSandboxCheckout}>{checkoutBusy?'Preparing test payment…':'Create Modem Pay TEST payment link'}</button>{checkoutUrl&&<p><a href={checkoutUrl} target="_blank" rel="noopener noreferrer" style={{fontWeight:700,color:'#064c3b',textDecoration:'underline'}}>Open secure Modem Pay TEST checkout</a></p>}{checkoutError&&<p role="alert">{checkoutError}</p>}</div>}
+    {ticketAccessToken&&!demoMode&&<div style={{border:'1px solid #b8d4c1',borderRadius:10,padding:14,background:'#edf7ef',marginTop:12}}><strong>Your sandbox test ticket</strong><p style={{fontSize:13}}>After completing a successful Modem Pay TEST transaction, open this private link to check your payment and view the printable SANDBOX ticket. Keep the link private. It will never be valid for travel.</p><a href={'/sandbox-ticket?token='+encodeURIComponent(ticketAccessToken)} target="_blank" rel="noopener noreferrer" style={{fontWeight:700,color:'#064c3b'}}>Check test payment / view test ticket</a></div>}
+    {checkoutReservationId&&!demoMode&&<div style={{border:'1px solid #e3c97f',borderRadius:10,padding:14,marginTop:12,background:'#fffaf0'}}><strong>Modem Pay sandbox test</strong><p style={{fontSize:13}}>Only use the Modem Pay TEST checkout page. It does not confirm the GTSC booking or issue a ticket. The seat hold expires in 10 minutes even if payment is still in progress. A verified TEST payment before expiry may generate a sandbox-only ticket.</p><button style={button} disabled={checkoutBusy} onClick={beginSandboxCheckout}>{checkoutBusy?'Preparing test payment…':'Create Modem Pay TEST payment link'}</button>{checkoutUrl&&<p><a href={checkoutUrl} target="_blank" rel="noopener noreferrer" style={{fontWeight:700,color:'#064c3b',textDecoration:'underline'}}>Open secure Modem Pay TEST checkout</a></p>}{checkoutError&&<p role="alert">{checkoutError}</p>}</div>}
    </section>}
    <BookingRequestForm key={service+'|'+origin+'|'+destination+'|'+date} service={service} origin={origin} destination={destination} date={date}/>
    <Timetable/>

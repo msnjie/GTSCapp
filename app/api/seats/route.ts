@@ -10,7 +10,7 @@ export async function GET(request:Request){
  const trip=await pool.query('SELECT capacity FROM public.trips WHERE id=$1 AND active=true AND departure_at>now()',[id]);
  if(!trip.rows.length)return NextResponse.json({error:'Trip unavailable'},{status:404});
  const occupied=await pool.query(`SELECT seat_number FROM public.reservations WHERE trip_id=$1
-   AND (status='confirmed' OR (status='held' AND hold_expires_at>now()))`,[id]);
+   AND (status IN ('confirmed','test_confirmed') OR (status='held' AND hold_expires_at>now()))`,[id]);
  return NextResponse.json({capacity:trip.rows[0].capacity,unavailableSeats:occupied.rows.map(x=>x.seat_number)},{headers:{'Cache-Control':'no-store'}});
  }catch{return NextResponse.json({error:'Seat availability temporarily unavailable'},{status:503});}
 }
