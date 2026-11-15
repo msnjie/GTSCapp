@@ -4,15 +4,17 @@ export const runtime='nodejs';
 export const dynamic='force-dynamic';
 export async function GET(){
  let scheduledTrips=0;
- try{const r=await pool.query('SELECT count(*)::int AS count FROM public.trips WHERE active=true AND departure_at>now()');scheduledTrips=r.rows[0].count;}catch{return NextResponse.json({ready:false,reason:'database_unavailable'},{status:503,headers:{'Cache-Control':'no-store'}});}
+ let stagedTrips=0;
+ try{const r=await pool.query('SELECT count(*) FILTER (WHERE active=true AND departure_at>now())::int AS active_count, count(*) FILTER (WHERE active=false AND departure_at>now())::int AS staged_count FROM public.trips');scheduledTrips=r.rows[0].active_count;stagedTrips=r.rows[0].staged_count;}catch{return NextResponse.json({ready:false,reason:'database_unavailable'},{status:503,headers:{'Cache-Control':'no-store'}});}
  return NextResponse.json({
   faresApproved:true,
   activeUpcomingTrips:scheduledTrips,
+  stagedUpcomingTrips:stagedTrips,
   bookingsEnabled:process.env.BOOKINGS_ENABLED==='true',
   paymentsEnabled:process.env.PAYMENTS_ENABLED==='true',
   mode:process.env.MODEMPAY_MODE==='sandbox'?'sandbox':'not_sandbox',
   livePaymentsAvailable:false,
-  ready:scheduledTrips>0&&process.env.BOOKINGS_ENABLED==='true',
-  nextStep:scheduledTrips===0?'Publish GTSC-approved departure times, routes, capacities and pickup points':'Complete payment/seat-hold reconciliation and production merchant verification'
+  ready:false, // Payment reconciliation and launch controls are not complete, regardless of staged inventory.
+  nextStep:'Verify operational schedule and pickup points; reconcile payment vs seat hold before activating sale'
  },{headers:{'Cache-Control':'no-store'}});
 }
