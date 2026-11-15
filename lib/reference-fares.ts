@@ -1,10 +1,10 @@
 // Reference-only fares supplied for the GTSC prototype. NEVER use as payable fares.
 // Historical GTSC listings and an unverified international partner-service report.
 export type FareGroup='regular'|'express'|'urban'|'international';
-export type FareReference={destination:string;amount:number;currency:'GMD'|'XOF';note?:string};
+export type FareReference={destination:string;amount:number;currency:'GMD';note?:string};
 export const REFERENCE_FARES:Record<FareGroup,readonly FareReference[]>={
  international:[
-  {destination:'Dakar, Senegal',amount:12000,currency:'XOF',note:'Jan 2026 reported Dakar Dem Dikk partner service; not GTSC-confirmed'},
+  {destination:'Dakar, Senegal',amount:1500,currency:'GMD',note:'Approx. GMD conversion of 12,000 CFA using 1 XOF ≈ D0.125 (15 Nov 2026); Jan 2026 Dakar Dem Dikk partner-service report, not a GTSC-confirmed fare'},
   {destination:'Bissau, Guinea-Bissau',amount:700,currency:'GMD',note:'Older unverified estimate'}
  ],
  regular:[
@@ -58,4 +58,4 @@ export function referenceFare(service:string,origin:string,destination:string):F
  const key:FareGroup=service==='Express'?'express':service==='Normal'?'regular':service==='Urban'?'urban':'international';
  return REFERENCE_FARES[key].find(f=>f.destination===destination);
 }
-export function fareLabel(f:FareReference){return f.currency==='XOF'?f.amount.toLocaleString('en-US')+' CFA': 'D'+f.amount.toLocaleString('en-US');}
+export function fareLabel(f:FareReference){return 'D'+f.amount.toLocaleString('en-US');}
