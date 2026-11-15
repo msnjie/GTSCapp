@@ -36,11 +36,11 @@ export default function BookingDemo(){
  async function search(){
   setBusy(true);setDemoMode(false);setSelectedTrip(null);setSeat(null);setHoldReceipt('');setMessage('');
   try{
-   const resp=await fetch('/api/trips?'+new URLSearchParams({origin,destination,date}),{cache:'no-store'});
+   const resp=await fetch('/api/trips?'+new URLSearchParams({origin,destination,date,service}),{cache:'no-store'});
    const data=await resp.json();
    if(!resp.ok)throw new Error(data.error||'Unable to search');
    setTrips(data.trips||[]);setBookingEnabled(Boolean(data.bookingEnabled));
-   setMessage(data.trips?.length?'Choose a departure below.':(data.notice||'No verified departures published for this selection.'));
+   setMessage(data.trips?.length?'Choose a departure below.':(data.notice||'No test departures for this route or date. Other routes are listed in the timetable guide.'));
   }catch(e){setMessage(e instanceof Error?e.message:'Unable to search');}
   finally{setBusy(false);}
  }
