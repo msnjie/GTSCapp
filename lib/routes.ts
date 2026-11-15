@@ -1,4 +1,16 @@
+const ALL_STOPS = [
+ 'Banjul','Kanifing','Serrekunda','Brikama','Soma','Kundang','Brikama-Ba','Brikama Ba',
+ 'Janjan Burreh','Janjanbureh','Bansang','Bakadaji','Basse','Faraba Banta','Bulock',
+ 'Kabokor','Bajagar','Sangajor','Kalaji','Wurokang','Kolior','Jalang Bereh',
+ 'Wellingara Ba','Pakaliba','Jareng','Kudang','Jahali','Nurtabeh','Banjulinding',
+ 'Sare Modu','Sare Bakary','Sare Sambel','Kunting','Mankamang Kunda','Koina',
+ 'Essau','Farafenni','Kaur','Wassu','Panchang','Kartong','Giboroh','Kafuta',
+ 'Mandinaring','Tabokoto','Lamin','Dakar, Senegal','Bissau, Guinea-Bissau',
+ 'Kaolack, Senegal','Tivaouane, Senegal'
+] as const;
+export const ALL_GTSC_LOCATIONS:readonly string[]=[...new Set(ALL_STOPS)].sort((a,b)=>a.localeCompare(b));
 export const REQUEST_ROUTES = {
+ 'All locations (departure request)':ALL_GTSC_LOCATIONS,
  'Nuwari Express':['Kanifing','Basse'],
  'Super Express':['Kanifing','Brikama','Soma','Brikama Ba','Janjanbureh','Bansang','Bakadaji','Basse'],
  'Express':['Banjul','Serrekunda','Brikama','Soma','Kundang','Brikama-Ba','Janjan Burreh','Bansang','Bakadaji','Basse'],
