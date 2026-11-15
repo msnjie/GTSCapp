@@ -28,6 +28,7 @@ export function allowedRequestRoute(service:string, origin:string, destination:s
  if(!Object.prototype.hasOwnProperty.call(REQUEST_ROUTES,service))return false;
  const stops:readonly string[]=REQUEST_ROUTES[service as RouteService];
  if(!stops.includes(origin)||!stops.includes(destination)||origin===destination)return false;
+ if(service==='All locations (departure request)')return true; // Enquiry only, never assumes an operating departure.
  if(service==='International (Dakar)')return (origin==='Kanifing'&&destination==='Dakar, Senegal')||
    (origin==='Dakar, Senegal'&&destination==='Banjul');
  if(['Urban','Up-country','North Bank'].includes(service))return true; // Requests only; operations must approve.
