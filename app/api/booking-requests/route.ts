@@ -13,6 +13,7 @@ const schema=z.object({
  phone:z.string().regex(/^\+[1-9]\d{7,14}$/),
  email:z.union([z.string().email().max(254),z.literal('')]).optional().default(''),
  preferredTime:z.string().max(30).optional().default(''),
+ preferredSeat:z.number().int().min(1).max(40).nullable().optional().default(null),
  consent:z.literal(true),
  website:z.string().max(100).optional().default('')
 }).strict();
@@ -43,15 +44,15 @@ export async function POST(req:Request){
   const volume=await pool.query("SELECT count(*)::int AS n FROM public.booking_requests WHERE contact_phone=$1 AND created_at>now()-interval '24 hours'",[phone]);
   if(volume.rows[0]?.n>=3)return NextResponse.json({error:'Request limit reached for this contact. Please speak with the booking desk.'},{status:429,headers});
   const saved=await pool.query(`INSERT INTO public.booking_requests
-     (service,origin,destination,preferred_date,preferred_time,contact_phone,contact_email,contact_consent)
-     VALUES($1,$2,$3,$4,$5,$6,$7,true)
+     (service,origin,destination,preferred_date,preferred_time,contact_phone,contact_email,preferred_seat,contact_consent)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8,true)
      ON CONFLICT DO NOTHING RETURNING id`,
-     [v.service,v.origin,v.destination,v.date,v.preferredTime||null,phone,v.email||null]);
+     [v.service,v.origin,v.destination,v.date,v.preferredTime||null,phone,v.email||null,v.preferredSeat]);
   if(saved.rowCount!==1)return NextResponse.json({error:'A matching pending request already exists for this contact and date.'},{status:409,headers});
   return NextResponse.json({
    requestId:saved.rows[0].id,status:'pending_review',requestReceived:true,
-   seatReserved:false,paymentCollected:false,ticketIssued:false,
-   notice:'Booking request received for operator review. Your seat and departure are NOT confirmed. No money has been collected.'
+   seatReserved:false,preferredSeat:v.preferredSeat,paymentCollected:false,ticketIssued:false,
+   notice:'Online booking request received. Your preferred seat (if supplied) is NOT reserved; GTSC must confirm the departure, fare and seat. No money has been collected.'
   },{status:201,headers});
  }catch{return NextResponse.json({error:'Unable to submit request. Please contact the booking desk.'},{status:503,headers});}
 }
