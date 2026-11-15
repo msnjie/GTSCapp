@@ -1,7 +1,7 @@
 import {NextResponse} from 'next/server';
 import {z} from 'zod';
 import {pool} from '../../../lib/db';
-import {createSandboxPaymentIntent} from '../../../lib/modempay';
+import {createSandboxPaymentIntent,SandboxCheckoutError} from '../../../lib/modempay';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 const body=z.object({reservationId:z.string().uuid()});
@@ -51,10 +51,12 @@ export async function POST(req:Request){
      WHERE reservation_id=$1`,[id,intent.paymentLink,intent.expiresAt]);
    return json({checkoutUrl:intent.paymentLink,environment:'sandbox',
      expiresAt:seat.hold_expires_at,ticketIssued:false,confirmed:false},200);
-  }catch{
+  }catch(error){
+   const reason=error instanceof SandboxCheckoutError?error.code:'PROVIDER_RESPONSE';
+   console.warn('GTSC sandbox checkout failure',reason);
    await pool.query(`UPDATE public.sandbox_checkout_attempts
      SET state='failed',updated_at=now() WHERE reservation_id=$1 AND state='creating'`,[id]).catch(()=>{});
-   return json({error:'Test payment link could not be created. Start with a new seat hold.'},503);
+   return json({error:'Test payment link could not be created. Start with a new seat hold.',diagnostic:reason},503);
   }
  }catch{return json({error:'Sandbox checkout temporarily unavailable'},503);}
 }
