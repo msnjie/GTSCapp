@@ -10,8 +10,8 @@ export default function Timetable(){
  function group(code:string){return /^(nuwari|super|normal|kunting|mankamang|basse)_/.test(code)?'south':/^(dakar|kaolack|tivaouane|bissau)_/.test(code)?'international':'other'}
  const shown=items.filter(s=>filter==='all'||group(s.code)===filter);
  return <section style={{background:'white',padding:22,borderRadius:16,marginBottom:18,boxShadow:'0 3px 18px rgba(0,0,0,.06)'}}>
-  <h2 style={{fontSize:21,margin:'0 0 8px'}}>GTSC timetable guide</h2>
-  <p style={{fontSize:13,color:'#596e64'}}>Times and prices provided for this project, displayed in Gambian dalasi. 40 seats per bus are now recorded for all listed services. For routes lacking a confirmed date, departure time or fare, online requests are available but actual seat allocation is not yet enabled.</p>
+  <h2 style={{fontSize:21,margin:'0 0 8px',color:'#30399a',borderLeft:'5px solid #ed4b5a',paddingLeft:12}}>GTSC timetable guide</h2>
+  <p style={{fontSize:13,color:'#626985'}}>Times and prices provided for this project, displayed in Gambian dalasi. 40 seats per bus are now recorded for all listed services. For routes lacking a confirmed date, departure time or fare, online requests are available but actual seat allocation is not yet enabled.</p>
   <label style={{display:'block',fontWeight:600,margin:'12px 0'}}>View corridor
    <select value={filter} onChange={e=>setFilter(e.target.value)} style={{display:'block',width:'100%',maxWidth:400,marginTop:5,padding:11,borderRadius:8,border:'1px solid #c8d8ce',fontSize:16}}>
     <option value="all">All services</option><option value="south">South Bank & up-country</option><option value="international">International</option><option value="other">North Bank & urban</option>
@@ -19,8 +19,8 @@ export default function Timetable(){
   </label>
   {failure&&<p role="alert">{failure}</p>}
   {!failure&&items.length===0&&<p>Loading timetable information…</p>}
-  <div style={{display:'grid',gap:10}}>{shown.map(s=><article key={s.code} style={{border:'1px solid #dbe6de',padding:14,borderRadius:10}}>
-   <div style={{fontWeight:700}}>{s.service_name}</div>
+  <div style={{display:'grid',gap:10}}>{shown.map(s=><article key={s.code} style={{border:'1px solid #dedff1',borderLeft:'4px solid #50a36b',padding:14,borderRadius:10,background:'#fbfbff'}}>
+   <div style={{fontWeight:700,color:'#30399a'}}>{s.service_name}</div>
    <div style={{fontSize:14,margin:'4px 0'}}>{s.origin} → {s.destination}</div>
    <div style={{display:'flex',gap:14,flexWrap:'wrap',fontSize:14}}>
     <span><strong>{s.departure_time||'Time not confirmed'}</strong> {s.departure_time?'GMT':''}</span>
@@ -28,11 +28,11 @@ export default function Timetable(){
     <span><strong>{label(s.fare_bututs)}</strong></span>
     {s.capacity!==null&&<span><strong>{s.capacity} seats</strong> per bus</span>}
    </div>
-   {s.boarding_note&&<p style={{fontSize:12,margin:'6px 0',color:'#596e64'}}>Boarding: {s.boarding_note}</p>}
-   {s.intermediate_fares&&Object.keys(s.intermediate_fares).length>0&&<p style={{fontSize:12,margin:'6px 0',color:'#596e64'}}>Intermediate reference fares: {Object.entries(s.intermediate_fares).map(([stop,amount])=>stop+' D'+amount).join(' · ')}</p>}
-   {s.note&&<p style={{fontSize:12,margin:'6px 0',color:'#596e64'}}>{s.note}</p>}
-   <div style={{fontSize:12,fontWeight:700,color:'#906318'}}>Not open for online booking yet</div>
+   {s.boarding_note&&<p style={{fontSize:12,margin:'6px 0',color:'#626985'}}>Boarding: {s.boarding_note}</p>}
+   {s.intermediate_fares&&Object.keys(s.intermediate_fares).length>0&&<p style={{fontSize:12,margin:'6px 0',color:'#626985'}}>Intermediate reference fares: {Object.entries(s.intermediate_fares).map(([stop,amount])=>stop+' D'+amount).join(' · ')}</p>}
+   {s.note&&<p style={{fontSize:12,margin:'6px 0',color:'#626985'}}>{s.note}</p>}
+   <div style={{fontSize:12,fontWeight:700,color:'#b13748'}}>Not open for online booking yet</div>
   </article>)}</div>
-  <p style={{fontSize:12,color:'#596e64',marginTop:12}}>Kanifing Booking Desk: +220 7941106 · +220 877941106 · +220 877941104 · +220 9092222. Dakar Colobane: +221 78 353 04 24 · +221 78 710 24 84. Confirm departures with the terminals before travelling.</p>
+  <p style={{fontSize:12,color:'#626985',marginTop:12}}>Kanifing Booking Desk: +220 7941106 · +220 877941106 · +220 877941104 · +220 9092222. Dakar Colobane: +221 78 353 04 24 · +221 78 710 24 84. Confirm departures with the terminals before travelling.</p>
  </section>
 }
