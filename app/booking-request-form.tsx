@@ -1,8 +1,6 @@
 'use client';
 import {useState} from 'react';
-export default function BookingRequestForm({service,origin,destination,date}:{service:string;origin:string;destination:string;date:string}){
- const [passengerName,setPassengerName]=useState('');
- const [phone,setPhone]=useState('');const [email,setEmail]=useState('');
+export default function BookingRequestForm({service,origin,destination,date,passengerName,phone,email}:{service:string;origin:string;destination:string;date:string;passengerName:string;phone:string;email:string}){
  const [consent,setConsent]=useState(false);const [busy,setBusy]=useState(false);
  const [message,setMessage]=useState('');const [ref,setRef]=useState('');
  const [website,setWebsite]=useState('');
@@ -22,18 +20,16 @@ export default function BookingRequestForm({service,origin,destination,date}:{se
   <p style={{fontSize:13}}>You can submit an online request for any listed route, with an optional seat preference. For services without a scheduled, priced departure, this does not reserve a real seat. GTSC staff must verify the bus and seat before confirmation. Sandbox only: no payment or travel ticket.</p>
   <p><strong>{service}</strong>: {origin} → {destination}, {date||'choose a date above'}</p>
   <form onSubmit={submit} style={{display:'grid',gap:12}}>
-   <label>Passenger full name (required)<input required type="text" minLength={2} maxLength={100} autoComplete="name" value={passengerName} onChange={e=>setPassengerName(e.target.value)} placeholder="First and last name" style={input}/></label>
-   <label>Phone number (required, e.g. +220…)<input required type="tel" autoComplete="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+2203663800" pattern="[+][1-9][0-9]{7,14}" style={input}/></label>
+   <p style={{fontSize:13,margin:0}}>Passenger: <strong>{passengerName.trim()||'Not entered'}</strong> · Phone: <strong>{phone.trim()||'Not entered'}</strong>{email.trim()?' · Email: '+email.trim():''}. Edit these details in the booking search above.</p>
    <label>Preferred seat (optional — a request, not a reservation)
     <select value={preferredSeat??''} onChange={e=>setPreferredSeat(e.target.value?Number(e.target.value):null)} style={input}><option value="">Any available seat</option>{Array.from({length:40},(_,i)=>i+1).map(n=><option value={n} key={n}>Seat {n}</option>)}</select>
    </label>
-   <label>Email address (optional)<input type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} style={input}/></label>
    <label style={{display:'flex',gap:9,fontSize:13}}><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} required/> I consent to GTSC contacting me about this request. No seat or departure is confirmed and no payment is collected.</label>
    <div style={{position:'absolute',left:'-10000px'}} aria-hidden="true"><input tabIndex={-1} value={website} onChange={e=>setWebsite(e.target.value)}/></div>
-   <button type="submit" disabled={!consent||!date||!destination||busy} style={{background:'#237b47',color:'#fff',border:0,borderRadius:9,padding:12,fontWeight:700}}>{busy?'Submitting…':'Request booking and preferred seat'}</button>
+   <button type="submit" disabled={!consent||!date||!destination||busy||passengerName.trim().length<2||!/^\+[1-9]\d{7,14}$/.test(phone.trim())||Boolean(email.trim()&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))} style={{background:'#237b47',color:'#fff',border:0,borderRadius:9,padding:12,fontWeight:700}}>{busy?'Submitting…':'Request booking and preferred seat'}</button>
   </form>
   {message&&<div role="status" style={{padding:12,background:'#eef7f1',marginTop:12,borderRadius:8}}>{message}{ref&&<p><strong>Request reference: {ref}</strong></p>}</div>}
-  <p style={{fontSize:12}}>Sandbox only. Details are stored privately for staff review; email and WhatsApp messages are not sent automatically.</p>
+  <p style={{fontSize:12}}>Full name and phone number are required in the search section; email is optional. Sandbox only. Details are stored privately for staff review; email and WhatsApp messages are not sent automatically.</p>
  </section>;
 }
 const input:React.CSSProperties={display:'block',width:'100%',boxSizing:'border-box',fontSize:16,padding:10,borderRadius:8,border:'1px solid #c4c7e6'};
