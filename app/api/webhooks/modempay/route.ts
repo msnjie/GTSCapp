@@ -43,8 +43,44 @@ export async function POST(req:Request){
  const chargeId=p.id;
  if(typeof chargeId!=='string'||!/^[a-zA-Z0-9_-]{8,100}$/.test(chargeId)||data.event.length>100)return json({error:'Invalid event ID'},400);
  const id=data.event+':'+chargeId;
+ const rawMetadata=p.metadata;
+ const metadata=rawMetadata&&typeof rawMetadata==='object'&&!Array.isArray(rawMetadata)
+  ?rawMetadata as Record<string,unknown>:{};
+ const candidate=metadata.reservation_id;
+ const reservationId=typeof candidate==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(candidate)?candidate:null;
+ // Modem Pay amounts are GMD decimal units, whereas GTSC stores integer bututs.
+ const amount=typeof p.amount==='number'&&Number.isFinite(p.amount)&&p.amount>=0&&Number.isSafeInteger(Math.round(p.amount*100))
+  ?Math.round(p.amount*100):null;
+ const currency=typeof p.currency==='string'?p.currency.toUpperCase().slice(0,8):null;
+ const client=await pool.connect().catch(()=>null);
+ if(!client)return json({error:'Unable to persist event; retry later'},503);
  try{
-  const result=await pool.query('INSERT INTO public.payment_events(event_id) VALUES($1) ON CONFLICT (event_id) DO NOTHING RETURNING event_id',[id]);
-  return json({received:true,duplicate:result.rowCount===0,ticketIssued:false},200);
- }catch{return json({error:'Unable to persist event; retry later'},503);}
+  await client.query('BEGIN');
+  const inserted=await client.query('INSERT INTO public.payment_events(event_id) VALUES($1) ON CONFLICT (event_id) DO NOTHING RETURNING event_id',[id]);
+  let matchStatus='other_event';
+  if(data.event==='charge.succeeded'){
+   matchStatus='unlinked';
+   if(reservationId){
+    const reservation=await client.query(
+     'SELECT amount_bututs,status,(hold_expires_at>now()) AS hold_valid FROM public.reservations WHERE id=$1',
+     [reservationId]
+    );
+    if(!reservation.rowCount)matchStatus='reservation_missing';
+    else if(currency!=='GMD'||amount===null||amount!==reservation.rows[0].amount_bututs)matchStatus='amount_mismatch';
+    else if(reservation.rows[0].status!=='held'||!reservation.rows[0].hold_valid)matchStatus='hold_expired';
+    else matchStatus='matched_held';
+   }
+  }
+  // Audit only. Even matched_held must not confirm a booking or issue a ticket:
+  // successful charges can arrive after a hold expires or while another payment is processing.
+  await client.query(`INSERT INTO public.sandbox_payment_audit
+   (event_id,reservation_id,payment_id,event_type,amount_bututs,currency,match_status)
+   VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (event_id) DO NOTHING`,
+   [id,reservationId,chargeId,data.event,amount,currency,matchStatus]);
+  await client.query('COMMIT');
+  return json({received:true,duplicate:inserted.rowCount===0,ticketIssued:false},200);
+ }catch{
+  await client.query('ROLLBACK').catch(()=>{});
+  return json({error:'Unable to persist event; retry later'},503);
+ }finally{client.release();}
 }
