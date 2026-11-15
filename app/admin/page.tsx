@@ -1,4 +1,3 @@
-import {redirect} from 'next/navigation';
 import {adminAuthorized} from '../../lib/admin-auth';
 import AdminDashboard from './admin-dashboard';
 export const dynamic='force-dynamic';

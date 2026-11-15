@@ -1,5 +1,5 @@
 'use client';
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 type RequestItem={id:string;passenger_name:string|null;service:string;origin:string;destination:string;preferred_date:string;preferred_seat:number|null;contact_phone:string;contact_email:string|null;status:string;created_at:string};
 type Trip={id:string;service_name:string;origin:string;destination:string;departure_at:string;capacity:number;occupied:number;fare_bututs:number};
 type Hold={id:string;customer_name:string;customer_phone:string;customer_email:string|null;seat_number:number;status:string;hold_expires_at:string;created_at:string;origin:string;destination:string;departure_at:string;amount_bututs:number};
@@ -12,6 +12,7 @@ function date(x:string){return x?new Date(x).toLocaleString('en-GB',{timeZone:'A
 export default function AdminDashboard({initiallyAuthenticated}:{initiallyAuthenticated:boolean}){
  const [auth,setAuth]=useState(initiallyAuthenticated),[password,setPassword]=useState(''),[data,setData]=useState<Overview|null>(null);
  const [error,setError]=useState(''),[busy,setBusy]=useState(false),[tab,setTab]=useState<'requests'|'departures'|'holds'|'payments'>('requests');
+ useEffect(()=>{if(initiallyAuthenticated)void load();},[initiallyAuthenticated]);
  async function load(){
   setBusy(true);setError('');
   try{const r=await fetch('/api/admin/overview',{cache:'no-store'});const d=await r.json();if(!r.ok){if(r.status===401)setAuth(false);throw Error(d.error||'Dashboard unavailable');}setData(d);}

@@ -14,7 +14,7 @@ export async function POST(req:Request){
  const hash=ipDigest(req);
  try{
   const recent=await pool.query(`SELECT count(*)::int AS n FROM public.admin_login_attempts
-    WHERE (ip_hash=$1 OR succeeded=false) AND succeeded=false
+    WHERE ip_hash=$1 AND succeeded=false
       AND created_at>now()-interval '15 minutes'`,[hash]);
   if(Number(recent.rows[0]?.n)>=12)
    return NextResponse.json({error:'Too many login attempts. Try again later.'},{status:429,headers});
