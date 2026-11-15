@@ -11,7 +11,7 @@ export default function Timetable(){
  const shown=items.filter(s=>filter==='all'||group(s.code)===filter);
  return <section style={{background:'white',padding:22,borderRadius:16,marginBottom:18,boxShadow:'0 3px 18px rgba(0,0,0,.06)'}}>
   <h2 style={{fontSize:21,margin:'0 0 8px'}}>GTSC timetable guide</h2>
-  <p style={{fontSize:13,color:'#596e64'}}>Times and prices provided for this project, displayed in Gambian dalasi. Forty seats per bus are recorded for Nuwari Express, Super Express, Normal Service and Dakar International, as confirmed by the project owner. The listed services are not open for online seat sales.</p>
+  <p style={{fontSize:13,color:'#596e64'}}>Times and prices provided for this project, displayed in Gambian dalasi. 40 seats per bus are now recorded for all listed services. For routes lacking a confirmed date, departure time or fare, online requests are available but actual seat allocation is not yet enabled.</p>
   <label style={{display:'block',fontWeight:600,margin:'12px 0'}}>View corridor
    <select value={filter} onChange={e=>setFilter(e.target.value)} style={{display:'block',width:'100%',maxWidth:400,marginTop:5,padding:11,borderRadius:8,border:'1px solid #c8d8ce',fontSize:16}}>
     <option value="all">All services</option><option value="south">South Bank & up-country</option><option value="international">International</option><option value="other">North Bank & urban</option>
